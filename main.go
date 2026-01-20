@@ -111,6 +111,9 @@ func setupFrontend(e *echo.Echo) {
 	// Create file server for static files
 	fileServer := http.FileServer(http.FS(distFS))
 
+	// Read index.html content for SPA fallback
+	indexHTML, _ := fs.ReadFile(distFS, "index.html")
+
 	// Serve static files and handle SPA routing
 	e.GET("/*", echo.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -122,10 +125,12 @@ func setupFrontend(e *echo.Echo) {
 		f, err := distFS.Open(path[1:]) // Remove leading /
 		if err != nil {
 			// File not found, serve index.html for SPA routing
-			r.URL.Path = "/index.html"
-		} else {
-			f.Close()
+			// Don't use fileServer here as it redirects /index.html to /
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write(indexHTML)
+			return
 		}
+		f.Close()
 
 		fileServer.ServeHTTP(w, r)
 	})))
