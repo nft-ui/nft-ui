@@ -1,0 +1,38 @@
+[Unit]
+Description=nft-ui - nftables quota management web interface
+Documentation=https://github.com/your-repo/nft-ui
+After=network.target nftables.service
+Wants=nftables.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/nft-ui
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=false
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# nftables requires these capabilities
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
+
+# Configuration via environment variables
+# Uncomment and modify as needed:
+#Environment=NFT_UI_LISTEN_ADDR=:8080
+#Environment=NFT_UI_AUTH_USER=admin
+#Environment=NFT_UI_AUTH_PASSWORD=changeme
+#Environment=NFT_UI_READ_ONLY=false
+#Environment=NFT_UI_REFRESH_INTERVAL=5
+
+# Or use an environment file:
+#EnvironmentFile=/etc/nft-ui/env
+
+[Install]
+WantedBy=multi-user.target

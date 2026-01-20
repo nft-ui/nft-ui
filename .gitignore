@@ -1,0 +1,25 @@
+# Binaries
+nft-ui
+nft-ui-*
+
+# Frontend build output
+frontend/dist/
+frontend/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Config with secrets
+config.yaml
+config.yml
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Code Agent
+.claude/

@@ -1,0 +1,21 @@
+# nft-ui configuration example
+# Copy this file to config.yaml and modify as needed
+
+# Server settings
+listen_addr: ":8080"
+
+# Authentication (leave empty to disable)
+auth_user: ""
+auth_password: ""
+
+# Read-only mode (disable all write operations)
+read_only: false
+
+# Auto-refresh interval in seconds
+refresh_interval: 5
+
+# nftables settings
+nft_binary: "/usr/sbin/nft"
+table_family: "inet"
+table_name: "filter"
+chain_name: "output"

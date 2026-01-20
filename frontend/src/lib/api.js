@@ -1,0 +1,69 @@
+const API_BASE = '/api/v1';
+
+async function request(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || `HTTP ${response.status}`);
+  }
+
+  return data;
+}
+
+export async function fetchQuotas() {
+  return request('/quotas');
+}
+
+export async function resetQuota(id) {
+  return request(`/quotas/${encodeURIComponent(id)}/reset`, {
+    method: 'POST',
+  });
+}
+
+export async function batchResetQuotas(ids) {
+  return request('/quotas/batch-reset', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export async function modifyQuota(id, bytes) {
+  return request(`/quotas/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ bytes }),
+  });
+}
+
+export async function addQuota(port, bytes, comment) {
+  return request('/quotas', {
+    method: 'POST',
+    body: JSON.stringify({ port, bytes, comment }),
+  });
+}
+
+export async function deleteQuota(id) {
+  return request(`/quotas/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function addPort(port) {
+  return request('/ports', {
+    method: 'POST',
+    body: JSON.stringify({ port }),
+  });
+}
+
+export async function deletePort(handle) {
+  return request(`/ports/${handle}`, {
+    method: 'DELETE',
+  });
+}
