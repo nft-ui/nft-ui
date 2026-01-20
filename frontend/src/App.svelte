@@ -12,12 +12,29 @@
   import QuotaList from './lib/QuotaList.svelte';
   import PortList from './lib/PortList.svelte';
   import Toast from './lib/Toast.svelte';
+  import PublicQuery from './lib/PublicQuery.svelte';
+
+  // Detect route immediately at script initialization
+  function getInitialRoute() {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path === '/query' || path.startsWith('/query')) {
+        return 'query';
+      }
+    }
+    return 'admin';
+  }
 
   let refreshTimer = $state(null);
+  let currentRoute = $state(getInitialRoute());
 
   onMount(() => {
-    loadQuotas();
-    startAutoRefresh();
+    // Only load data for admin route
+    if (currentRoute === 'admin') {
+      loadQuotas();
+      startAutoRefresh();
+    }
+
     return () => stopAutoRefresh();
   });
 
@@ -43,44 +60,48 @@
   }
 </script>
 
-<div class="app">
-  <header>
-    <div class="container header-content">
-      <h1>nft-ui</h1>
-      <div class="header-right">
-        {#if $readOnly}
-          <span class="badge badge-warning">Read Only</span>
-        {/if}
-        <button class="btn-secondary" onclick={handleRefresh} disabled={$loading}>
-          {$loading ? 'Refreshing...' : 'Refresh'}
-        </button>
+{#if currentRoute === 'query'}
+  <PublicQuery />
+{:else}
+  <div class="app">
+    <header>
+      <div class="container header-content">
+        <h1>nft-ui</h1>
+        <div class="header-right">
+          {#if $readOnly}
+            <span class="badge badge-warning">Read Only</span>
+          {/if}
+          <button class="btn-secondary" onclick={handleRefresh} disabled={$loading}>
+            {$loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </div>
+    </header>
+
+    <main class="container">
+      {#if $error}
+        <div class="error-banner">
+          <span>Error: {$error}</span>
+          <button onclick={handleRefresh}>Retry</button>
+        </div>
+      {/if}
+
+      <QuotaList />
+      <PortList />
+    </main>
+
+    <!-- Toast notifications -->
+    <div class="toast-container">
+      {#each $notifications as notification (notification.id)}
+        <Toast
+          message={notification.message}
+          type={notification.type}
+          onclose={() => removeNotification(notification.id)}
+        />
+      {/each}
     </div>
-  </header>
-
-  <main class="container">
-    {#if $error}
-      <div class="error-banner">
-        <span>Error: {$error}</span>
-        <button onclick={handleRefresh}>Retry</button>
-      </div>
-    {/if}
-
-    <QuotaList />
-    <PortList />
-  </main>
-
-  <!-- Toast notifications -->
-  <div class="toast-container">
-    {#each $notifications as notification (notification.id)}
-      <Toast
-        message={notification.message}
-        type={notification.type}
-        onclose={() => removeNotification(notification.id)}
-      />
-    {/each}
   </div>
-</div>
+{/if}
 
 <style>
   .app {

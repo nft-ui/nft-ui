@@ -57,6 +57,30 @@ type APIResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+// QuotaWithToken extends QuotaRule with a query token for admin panel
+type QuotaWithToken struct {
+	QuotaRule
+	Token string `json:"token,omitempty"`
+}
+
+// QuotasResponseWithTokens extends QuotasResponse with tokens for admin panel
+type QuotasResponseWithTokens struct {
+	Quotas          []QuotaWithToken `json:"quotas"`
+	AllowedPorts    []AllowedPort    `json:"allowed_ports"`
+	ReadOnly        bool             `json:"read_only"`
+	RefreshInterval int              `json:"refresh_interval"`
+}
+
+// PublicQueryResponse is the API response for public token-based queries
+type PublicQueryResponse struct {
+	Port         int     `json:"port"`
+	UsedBytes    int64   `json:"used_bytes"`
+	QuotaBytes   int64   `json:"quota_bytes"`
+	UsagePercent float64 `json:"usage_percent"`
+	Status       string  `json:"status"`
+	Comment      string  `json:"comment,omitempty"`
+}
+
 // NFT JSON structures for parsing nft -j output
 
 // NFTRuleset is the top-level structure from nft -j list chain

@@ -12,12 +12,15 @@
   let showDeleteConfirm = $state(false);
   let showEditModal = $state(false);
   let processing = $state(false);
+  let copiedToken = $state(false);
+  let copiedUrl = $state(false);
 
   let isSelected = $derived($selectedIds.has(quota.id));
   let progressColor = $derived(getProgressColor(quota.usage_percent));
   let statusColor = $derived(getStatusColor(quota.status));
   let hasInbound = $derived($allowedPorts.some(p => p.port === quota.port));
   let ringPercent = $derived(Math.min(quota.usage_percent, 100));
+  let queryUrl = $derived(quota.token ? `${window.location.origin}/query?token=${quota.token}` : '');
 
   function handleCheckbox(e) {
     e.stopPropagation();
@@ -53,6 +56,22 @@
     } finally {
       processing = false;
       showDeleteConfirm = false;
+    }
+  }
+
+  function copyToken() {
+    if (quota.token) {
+      navigator.clipboard.writeText(quota.token);
+      copiedToken = true;
+      setTimeout(() => copiedToken = false, 2000);
+    }
+  }
+
+  function copyQueryUrl() {
+    if (queryUrl) {
+      navigator.clipboard.writeText(queryUrl);
+      copiedUrl = true;
+      setTimeout(() => copiedUrl = false, 2000);
     }
   }
 </script>
@@ -110,6 +129,26 @@
         <span class="label">ID:</span>
         <span class="value code">{quota.id}</span>
       </div>
+      {#if quota.token}
+        <div class="detail-row">
+          <span class="label">Query Token:</span>
+          <span class="value code token-value">
+            {quota.token}
+            <button class="copy-btn" onclick={copyToken} title="Copy token">
+              {copiedToken ? 'Copied!' : 'Copy'}
+            </button>
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Query URL:</span>
+          <span class="value code url-value">
+            <a href={queryUrl} target="_blank">/query?token={quota.token}</a>
+            <button class="copy-btn" onclick={copyQueryUrl} title="Copy URL">
+              {copiedUrl ? 'Copied!' : 'Copy'}
+            </button>
+          </span>
+        </div>
+      {/if}
 
       {#if !$readOnly}
         <div class="actions">
@@ -344,6 +383,38 @@
     background-color: var(--color-bg);
     padding: 2px 6px;
     border-radius: 4px;
+  }
+
+  .token-value,
+  .url-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .url-value a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .url-value a:hover {
+    text-decoration: underline;
+  }
+
+  .copy-btn {
+    padding: 2px 8px;
+    font-size: 11px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover {
+    background-color: var(--color-surface-hover);
+    color: var(--color-text);
   }
 
   .actions {

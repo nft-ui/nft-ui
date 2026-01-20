@@ -10,17 +10,19 @@ import (
 
 // Handler holds dependencies for HTTP handlers
 type Handler struct {
-	nft    *NFTManager
-	cfg    *Config
-	logger *log.Logger
+	nft      *NFTManager
+	cfg      *Config
+	logger   *log.Logger
+	tokenGen *TokenGenerator
 }
 
 // NewHandler creates a new Handler
-func NewHandler(nft *NFTManager, cfg *Config, logger *log.Logger) *Handler {
+func NewHandler(nft *NFTManager, cfg *Config, logger *log.Logger, tokenGen *TokenGenerator) *Handler {
 	return &Handler{
-		nft:    nft,
-		cfg:    cfg,
-		logger: logger,
+		nft:      nft,
+		cfg:      cfg,
+		logger:   logger,
+		tokenGen: tokenGen,
 	}
 }
 
@@ -248,5 +250,83 @@ func (h *Handler) DeletePort(c echo.Context) error {
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Port deleted successfully",
+	})
+}
+
+// ListQuotasWithTokens handles GET /api/v1/quotas when tokens are enabled
+// Returns quotas with their query tokens for the admin panel
+func (h *Handler) ListQuotasWithTokens(c echo.Context) error {
+	quotas, err := h.nft.ListQuotas()
+	if err != nil {
+		h.logger.Printf("Error listing quotas: %v", err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	allowedPorts, err := h.nft.ListAllowedPorts()
+	if err != nil {
+		h.logger.Printf("Error listing allowed ports: %v", err)
+		allowedPorts = []AllowedPort{}
+	}
+
+	// Add tokens to quotas
+	quotasWithTokens := make([]QuotaWithToken, len(quotas))
+	for i, q := range quotas {
+		quotasWithTokens[i] = QuotaWithToken{
+			QuotaRule: q,
+			Token:     h.tokenGen.Generate(q.Port),
+		}
+	}
+
+	return c.JSON(http.StatusOK, QuotasResponseWithTokens{
+		Quotas:          quotasWithTokens,
+		AllowedPorts:    allowedPorts,
+		ReadOnly:        h.cfg.ReadOnly,
+		RefreshInterval: h.cfg.RefreshInterval,
+	})
+}
+
+// QueryByToken handles GET /api/v1/public/query/:token (NO AUTH REQUIRED)
+// Allows users to query quota usage with a token
+func (h *Handler) QueryByToken(c echo.Context) error {
+	token := c.Param("token")
+
+	// Validate token format
+	if !IsValidTokenFormat(token) {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Invalid token format",
+		})
+	}
+
+	// Get all quotas
+	quotas, err := h.nft.ListQuotas()
+	if err != nil {
+		h.logger.Printf("Error listing quotas for token query: %v", err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   "Internal server error",
+		})
+	}
+
+	// Find matching quota
+	quota := h.tokenGen.FindQuotaByToken(token, quotas)
+	if quota == nil {
+		// Return generic error to prevent enumeration
+		return c.JSON(http.StatusNotFound, APIResponse{
+			Success: false,
+			Error:   "Token not found",
+		})
+	}
+
+	return c.JSON(http.StatusOK, PublicQueryResponse{
+		Port:         quota.Port,
+		UsedBytes:    quota.UsedBytes,
+		QuotaBytes:   quota.QuotaBytes,
+		UsagePercent: quota.UsagePercent,
+		Status:       quota.Status,
+		Comment:      quota.Comment,
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -60,6 +61,65 @@ func AuditLogMiddleware(logger *log.Logger) echo.MiddlewareFunc {
 					user,
 				)
 			}
+			return next(c)
+		}
+	}
+}
+
+// RateLimitMiddleware provides simple in-memory rate limiting per IP
+func RateLimitMiddleware(limit int, window time.Duration) echo.MiddlewareFunc {
+	var mu sync.Mutex
+	requests := make(map[string][]time.Time)
+
+	// Cleanup old entries periodically
+	go func() {
+		ticker := time.NewTicker(window)
+		defer ticker.Stop()
+		for range ticker.C {
+			mu.Lock()
+			now := time.Now()
+			for ip, times := range requests {
+				var valid []time.Time
+				for _, t := range times {
+					if now.Sub(t) < window {
+						valid = append(valid, t)
+					}
+				}
+				if len(valid) == 0 {
+					delete(requests, ip)
+				} else {
+					requests[ip] = valid
+				}
+			}
+			mu.Unlock()
+		}
+	}()
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			ip := c.RealIP()
+			now := time.Now()
+
+			mu.Lock()
+			// Clean old entries for this IP
+			var validRequests []time.Time
+			for _, t := range requests[ip] {
+				if now.Sub(t) < window {
+					validRequests = append(validRequests, t)
+				}
+			}
+
+			if len(validRequests) >= limit {
+				mu.Unlock()
+				return c.JSON(http.StatusTooManyRequests, APIResponse{
+					Success: false,
+					Error:   "Rate limit exceeded. Please try again later.",
+				})
+			}
+
+			requests[ip] = append(validRequests, now)
+			mu.Unlock()
+
 			return next(c)
 		}
 	}

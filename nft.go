@@ -81,25 +81,19 @@ func (n *NFTManager) parseQuotaRules(data []byte) ([]QuotaRule, error) {
 			continue
 		}
 
-		// Look for quota expression in the rule
-		quotaRule, ok := n.extractQuotaRule(rule)
-		if ok {
-			rules = append(rules, quotaRule)
-		}
+		// Extract quota rules (may return multiple for port sets)
+		quotaRules := n.extractQuotaRules(rule)
+		rules = append(rules, quotaRules...)
 	}
 
 	return rules, nil
 }
 
-// extractQuotaRule extracts quota information from a rule
-func (n *NFTManager) extractQuotaRule(rule *NFTRule) (QuotaRule, bool) {
-	var qr QuotaRule
-	qr.Handle = rule.Handle
-	qr.ID = fmt.Sprintf("%s_%s_%s_%d", rule.Family, rule.Table, rule.Chain, rule.Handle)
-	qr.Comment = rule.Comment
-
+// extractQuotaRules extracts quota information from a rule (supports multiple ports)
+func (n *NFTManager) extractQuotaRules(rule *NFTRule) []QuotaRule {
 	var hasQuota bool
-	var port int
+	var quotaBytes, usedBytes int64
+	var ports []int
 
 	for _, expr := range rule.Expr {
 		// Look for quota expression
@@ -109,12 +103,12 @@ func (n *NFTManager) extractQuotaRule(rule *NFTRule) (QuotaRule, bool) {
 				// Get quota value (limit) with unit conversion
 				if val, ok := qm["val"].(float64); ok {
 					valUnit, _ := qm["val_unit"].(string)
-					qr.QuotaBytes = convertToBytes(int64(val), valUnit)
+					quotaBytes = convertToBytes(int64(val), valUnit)
 				}
 				// Get used value with unit conversion
 				if used, ok := qm["used"].(float64); ok {
 					usedUnit, _ := qm["used_unit"].(string)
-					qr.UsedBytes = convertToBytes(int64(used), usedUnit)
+					usedBytes = convertToBytes(int64(used), usedUnit)
 				}
 			}
 		}
@@ -122,53 +116,109 @@ func (n *NFTManager) extractQuotaRule(rule *NFTRule) (QuotaRule, bool) {
 		// Look for port match (th sport)
 		if matchData, ok := expr["match"]; ok {
 			if mm, ok := matchData.(map[string]interface{}); ok {
-				port = n.extractPort(mm)
+				extractedPorts := n.extractPorts(mm)
+				if len(extractedPorts) > 0 {
+					ports = extractedPorts
+				}
 			}
 		}
 	}
 
 	if !hasQuota {
-		return qr, false
+		return nil
 	}
 
-	qr.Port = port
+	// If no ports found, still return a single rule with port 0
+	if len(ports) == 0 {
+		ports = []int{0}
+	}
 
 	// Calculate usage percent
-	if qr.QuotaBytes > 0 {
-		qr.UsagePercent = float64(qr.UsedBytes) / float64(qr.QuotaBytes) * 100
+	var usagePercent float64
+	if quotaBytes > 0 {
+		usagePercent = float64(usedBytes) / float64(quotaBytes) * 100
 	}
 
 	// Determine status
-	if qr.UsagePercent >= 100 {
-		qr.Status = "exceeded"
-	} else if qr.UsagePercent >= 70 {
-		qr.Status = "warning"
+	var status string
+	if usagePercent >= 100 {
+		status = "exceeded"
+	} else if usagePercent >= 70 {
+		status = "warning"
 	} else {
-		qr.Status = "ok"
+		status = "ok"
 	}
 
-	return qr, true
+	// Create a QuotaRule for each port
+	var rules []QuotaRule
+	for _, port := range ports {
+		qr := QuotaRule{
+			Handle:       rule.Handle,
+			ID:           fmt.Sprintf("%s_%s_%s_%d_%d", rule.Family, rule.Table, rule.Chain, rule.Handle, port),
+			Comment:      rule.Comment,
+			Port:         port,
+			QuotaBytes:   quotaBytes,
+			UsedBytes:    usedBytes,
+			UsagePercent: usagePercent,
+			Status:       status,
+		}
+		rules = append(rules, qr)
+	}
+
+	return rules
 }
 
-// extractPort extracts the port number from a match expression
-func (n *NFTManager) extractPort(match map[string]interface{}) int {
+// extractPorts extracts port numbers from a match expression (supports single port or port set)
+func (n *NFTManager) extractPorts(match map[string]interface{}) []int {
 	left, ok := match["left"].(map[string]interface{})
 	if !ok {
-		return 0
+		return nil
 	}
 
 	// Check for payload match (th sport)
-	if payload, ok := left["payload"].(map[string]interface{}); ok {
-		field, _ := payload["field"].(string)
-		if field == "sport" || field == "dport" {
-			// Get the right side (port number)
-			if port, ok := match["right"].(float64); ok {
-				return int(port)
+	payload, ok := left["payload"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	field, _ := payload["field"].(string)
+	if field != "sport" && field != "dport" {
+		return nil
+	}
+
+	right := match["right"]
+	if right == nil {
+		return nil
+	}
+
+	var ports []int
+
+	// Single port
+	if port, ok := right.(float64); ok {
+		return []int{int(port)}
+	}
+
+	// Port set: {"set": [8889, 14001]}
+	if rightMap, ok := right.(map[string]interface{}); ok {
+		if set, ok := rightMap["set"].([]interface{}); ok {
+			for _, p := range set {
+				if port, ok := p.(float64); ok {
+					ports = append(ports, int(port))
+				}
 			}
 		}
 	}
 
-	return 0
+	// Direct array: [8889, 14001]
+	if set, ok := right.([]interface{}); ok {
+		for _, p := range set {
+			if port, ok := p.(float64); ok {
+				ports = append(ports, int(port))
+			}
+		}
+	}
+
+	return ports
 }
 
 // ResetQuota resets a quota's used bytes to 0
