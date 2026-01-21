@@ -56,6 +56,11 @@ func (n *NFTManager) ListQuotas() ([]QuotaRule, error) {
 	// Get JSON output with handles
 	output, err := n.execNFT("-j", "-a", "list", "chain", n.tableFamily, n.tableName, n.chainName)
 	if err != nil {
+		// If chain doesn't exist, return empty list instead of error
+		if strings.Contains(err.Error(), "No such file or directory") ||
+			strings.Contains(err.Error(), "does not exist") {
+			return []QuotaRule{}, nil
+		}
 		return nil, err
 	}
 
@@ -343,8 +348,37 @@ func (n *NFTManager) deleteRuleByHandle(handle int64) error {
 	return err
 }
 
+// EnsureFilterOutputSetup ensures the filter table and output chain exist
+func (n *NFTManager) EnsureFilterOutputSetup() error {
+	// Check if table exists
+	_, err := n.execNFT("list", "table", n.tableFamily, n.tableName)
+	if err != nil {
+		// Create table
+		if _, err := n.execNFT("add", "table", n.tableFamily, n.tableName); err != nil {
+			return fmt.Errorf("failed to create %s %s table: %w", n.tableFamily, n.tableName, err)
+		}
+	}
+
+	// Check if output chain exists
+	_, err = n.execNFT("list", "chain", n.tableFamily, n.tableName, n.chainName)
+	if err != nil {
+		// Create output chain
+		if _, err := n.execNFT("add", "chain", n.tableFamily, n.tableName, n.chainName,
+			"{ type filter hook output priority filter ; policy accept ; }"); err != nil {
+			return fmt.Errorf("failed to create %s chain: %w", n.chainName, err)
+		}
+	}
+
+	return nil
+}
+
 // addQuotaRule adds a new quota rule
 func (n *NFTManager) addQuotaRule(port int, bytes int64, comment string) error {
+	// Ensure filter table and output chain exist
+	if err := n.EnsureFilterOutputSetup(); err != nil {
+		return err
+	}
+
 	// Convert bytes to mbytes for cleaner command
 	mbytes := bytes / (1000 * 1000)
 	if mbytes < 1 {
@@ -406,6 +440,11 @@ func (n *NFTManager) ListAllowedPorts() ([]AllowedPort, error) {
 	// Get JSON output from input chain
 	output, err := n.execNFT("-j", "-a", "list", "chain", n.tableFamily, n.tableName, "input")
 	if err != nil {
+		// If chain doesn't exist, return empty list instead of error
+		if strings.Contains(err.Error(), "No such file or directory") ||
+			strings.Contains(err.Error(), "does not exist") {
+			return []AllowedPort{}, nil
+		}
 		return nil, err
 	}
 
@@ -529,6 +568,30 @@ func (n *NFTManager) extractDPorts(match map[string]interface{}) []int {
 	return ports
 }
 
+// EnsureFilterInputSetup ensures the filter table and input chain exist
+func (n *NFTManager) EnsureFilterInputSetup() error {
+	// Check if table exists
+	_, err := n.execNFT("list", "table", n.tableFamily, n.tableName)
+	if err != nil {
+		// Create table
+		if _, err := n.execNFT("add", "table", n.tableFamily, n.tableName); err != nil {
+			return fmt.Errorf("failed to create %s %s table: %w", n.tableFamily, n.tableName, err)
+		}
+	}
+
+	// Check if input chain exists
+	_, err = n.execNFT("list", "chain", n.tableFamily, n.tableName, "input")
+	if err != nil {
+		// Create input chain
+		if _, err := n.execNFT("add", "chain", n.tableFamily, n.tableName, "input",
+			"{ type filter hook input priority filter ; policy accept ; }"); err != nil {
+			return fmt.Errorf("failed to create input chain: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // AddAllowedPort adds a new allowed inbound port rule
 func (n *NFTManager) AddAllowedPort(port int) error {
 	n.mu.Lock()
@@ -537,6 +600,11 @@ func (n *NFTManager) AddAllowedPort(port int) error {
 	// Validate port
 	if port < 1 || port > 65535 {
 		return fmt.Errorf("invalid port: %d", port)
+	}
+
+	// Ensure filter table and input chain exist
+	if err := n.EnsureFilterInputSetup(); err != nil {
+		return err
 	}
 
 	// nft add rule inet filter input tcp dport <port> accept comment "nft-ui managed"

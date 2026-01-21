@@ -11,15 +11,17 @@ import (
 // Handler holds dependencies for HTTP handlers
 type Handler struct {
 	nft      *NFTManager
+	fwd      *ForwardingManager
 	cfg      *Config
 	logger   *log.Logger
 	tokenGen *TokenGenerator
 }
 
 // NewHandler creates a new Handler
-func NewHandler(nft *NFTManager, cfg *Config, logger *log.Logger, tokenGen *TokenGenerator) *Handler {
+func NewHandler(nft *NFTManager, fwd *ForwardingManager, cfg *Config, logger *log.Logger, tokenGen *TokenGenerator) *Handler {
 	return &Handler{
 		nft:      nft,
+		fwd:      fwd,
 		cfg:      cfg,
 		logger:   logger,
 		tokenGen: tokenGen,
@@ -328,5 +330,166 @@ func (h *Handler) QueryByToken(c echo.Context) error {
 		UsagePercent: quota.UsagePercent,
 		Status:       quota.Status,
 		Comment:      quota.Comment,
+	})
+}
+
+// ListForwarding handles GET /api/v1/forwarding
+func (h *Handler) ListForwarding(c echo.Context) error {
+	rules, err := h.fwd.ListForwardingRules()
+	if err != nil {
+		h.logger.Printf("Error listing forwarding rules: %v", err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, ForwardingResponse{
+		Rules:    rules,
+		ReadOnly: h.cfg.ReadOnly,
+	})
+}
+
+// AddForwarding handles POST /api/v1/forwarding
+func (h *Handler) AddForwarding(c echo.Context) error {
+	var req AddForwardingRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Invalid request body",
+		})
+	}
+
+	if req.SrcPort < 1 || req.SrcPort > 65535 {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Source port must be between 1 and 65535",
+		})
+	}
+
+	if req.DstPort < 1 || req.DstPort > 65535 {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Destination port must be between 1 and 65535",
+		})
+	}
+
+	if req.Protocol != "tcp" && req.Protocol != "udp" && req.Protocol != "both" {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Protocol must be 'tcp', 'udp', or 'both'",
+		})
+	}
+
+	if err := h.fwd.AddForwardingRule(req.SrcPort, req.DstIP, req.DstPort, req.Protocol, req.Comment); err != nil {
+		h.logger.Printf("Error adding forwarding rule: %v", err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	h.logger.Printf("Forwarding rule added: %d -> %s:%d (%s)", req.SrcPort, req.DstIP, req.DstPort, req.Protocol)
+	return c.JSON(http.StatusCreated, APIResponse{
+		Success: true,
+		Message: "Forwarding rule added successfully",
+	})
+}
+
+// EditForwarding handles PUT /api/v1/forwarding/:id
+func (h *Handler) EditForwarding(c echo.Context) error {
+	id := c.Param("id")
+
+	var req EditForwardingRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Invalid request body",
+		})
+	}
+
+	if req.DstPort < 1 || req.DstPort > 65535 {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Destination port must be between 1 and 65535",
+		})
+	}
+
+	if req.Protocol != "tcp" && req.Protocol != "udp" && req.Protocol != "both" {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Protocol must be 'tcp', 'udp', or 'both'",
+		})
+	}
+
+	if err := h.fwd.EditForwardingRule(id, req.DstIP, req.DstPort, req.Protocol, req.Comment); err != nil {
+		h.logger.Printf("Error editing forwarding rule %s: %v", id, err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	h.logger.Printf("Forwarding rule edited: %s -> %s:%d (%s)", id, req.DstIP, req.DstPort, req.Protocol)
+	return c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Message: "Forwarding rule updated successfully",
+	})
+}
+
+// DeleteForwarding handles DELETE /api/v1/forwarding/:id
+func (h *Handler) DeleteForwarding(c echo.Context) error {
+	id := c.Param("id")
+
+	if err := h.fwd.DeleteForwardingRule(id); err != nil {
+		h.logger.Printf("Error deleting forwarding rule %s: %v", id, err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	h.logger.Printf("Forwarding rule deleted: %s", id)
+	return c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Message: "Forwarding rule deleted successfully",
+	})
+}
+
+// EnableForwarding handles POST /api/v1/forwarding/:id/enable
+func (h *Handler) EnableForwarding(c echo.Context) error {
+	id := c.Param("id")
+
+	if err := h.fwd.EnableForwardingRule(id); err != nil {
+		h.logger.Printf("Error enabling forwarding rule %s: %v", id, err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	h.logger.Printf("Forwarding rule enabled: %s", id)
+	return c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Message: "Forwarding rule enabled successfully",
+	})
+}
+
+// DisableForwarding handles POST /api/v1/forwarding/:id/disable
+func (h *Handler) DisableForwarding(c echo.Context) error {
+	id := c.Param("id")
+
+	if err := h.fwd.DisableForwardingRule(id); err != nil {
+		h.logger.Printf("Error disabling forwarding rule %s: %v", id, err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	h.logger.Printf("Forwarding rule disabled: %s", id)
+	return c.JSON(http.StatusOK, APIResponse{
+		Success: true,
+		Message: "Forwarding rule disabled successfully",
 	})
 }

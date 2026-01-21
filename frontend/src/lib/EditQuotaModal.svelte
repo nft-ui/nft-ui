@@ -1,9 +1,15 @@
 <script>
+  import { onMount } from 'svelte';
   import { modifyQuota } from './api.js';
-  import { loadQuotas, success, errorNotify } from './stores.js';
+  import { loadQuotas, success, errorNotify, pauseRefresh, resumeRefresh } from './stores.js';
   import { formatBytes, parseBytes } from './utils.js';
 
   let { quota, onclose } = $props();
+
+  onMount(() => {
+    pauseRefresh();
+    return () => resumeRefresh();
+  });
 
   // Initialize with current value
   let quotaValue = $state('');

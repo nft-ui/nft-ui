@@ -1,5 +1,15 @@
 import { writable, derived, get } from 'svelte/store';
-import { fetchQuotas, addPort, deletePort } from './api.js';
+import {
+  fetchQuotas,
+  addPort,
+  deletePort,
+  fetchForwardingRules,
+  addForwardingRule as apiAddForwarding,
+  editForwardingRule as apiEditForwarding,
+  deleteForwardingRule as apiDeleteForwarding,
+  enableForwardingRule as apiEnableForwarding,
+  disableForwardingRule as apiDisableForwarding,
+} from './api.js';
 
 // Core state
 export const quotas = writable([]);
@@ -8,7 +18,19 @@ export const loading = writable(false);
 export const error = writable(null);
 export const selectedIds = writable(new Set());
 export const readOnly = writable(false);
-export const refreshInterval = writable(5);
+export const refreshInterval = writable(20);
+
+// Modal state - when true, auto-refresh is paused
+export const isEditingModal = writable(false);
+
+// Helper to pause refresh while editing
+export function pauseRefresh() {
+  isEditingModal.set(true);
+}
+
+export function resumeRefresh() {
+  isEditingModal.set(false);
+}
 
 // Derived stores
 export const sortedQuotas = derived(quotas, ($quotas) =>
@@ -107,6 +129,93 @@ export async function removeAllowedPort(handle) {
     await loadQuotas();
   } catch (e) {
     errorNotify(`Failed to delete port: ${e.message}`);
+    throw e;
+  }
+}
+
+// Forwarding state
+export const forwardingRules = writable([]);
+export const forwardingLoading = writable(false);
+
+// Sorted forwarding rules: enabled first, then by source port
+export const sortedForwardingRules = derived(forwardingRules, ($rules) =>
+  [...$rules].sort((a, b) => {
+    // Enabled rules first
+    if (a.enabled !== b.enabled) return b.enabled - a.enabled;
+    // Then by source port
+    return a.src_port - b.src_port;
+  })
+);
+
+// Load forwarding rules
+export async function loadForwardingRules() {
+  forwardingLoading.set(true);
+  try {
+    const data = await fetchForwardingRules();
+    forwardingRules.set(data.rules || []);
+  } catch (e) {
+    errorNotify(`Failed to load forwarding rules: ${e.message}`);
+  } finally {
+    forwardingLoading.set(false);
+  }
+}
+
+// Add forwarding rule
+export async function addForwardingRule(srcPort, dstIP, dstPort, protocol, comment) {
+  try {
+    await apiAddForwarding(srcPort, dstIP, dstPort, protocol, comment);
+    success('Forwarding rule added');
+    await loadForwardingRules();
+  } catch (e) {
+    errorNotify(`Failed to add forwarding rule: ${e.message}`);
+    throw e;
+  }
+}
+
+// Edit forwarding rule
+export async function editForwardingRule(id, dstIP, dstPort, protocol, comment) {
+  try {
+    await apiEditForwarding(id, dstIP, dstPort, protocol, comment);
+    success('Forwarding rule updated');
+    await loadForwardingRules();
+  } catch (e) {
+    errorNotify(`Failed to update forwarding rule: ${e.message}`);
+    throw e;
+  }
+}
+
+// Delete forwarding rule
+export async function removeForwardingRule(id) {
+  try {
+    await apiDeleteForwarding(id);
+    success('Forwarding rule deleted');
+    await loadForwardingRules();
+  } catch (e) {
+    errorNotify(`Failed to delete forwarding rule: ${e.message}`);
+    throw e;
+  }
+}
+
+// Enable forwarding rule
+export async function enableForwardingRule(id) {
+  try {
+    await apiEnableForwarding(id);
+    success('Forwarding rule enabled');
+    await loadForwardingRules();
+  } catch (e) {
+    errorNotify(`Failed to enable forwarding rule: ${e.message}`);
+    throw e;
+  }
+}
+
+// Disable forwarding rule
+export async function disableForwardingRule(id) {
+  try {
+    await apiDisableForwarding(id);
+    success('Forwarding rule disabled');
+    await loadForwardingRules();
+  } catch (e) {
+    errorNotify(`Failed to disable forwarding rule: ${e.message}`);
     throw e;
   }
 }

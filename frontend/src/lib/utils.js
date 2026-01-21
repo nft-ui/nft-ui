@@ -45,3 +45,25 @@ export function getProgressColor(percent) {
   if (percent >= 70) return 'var(--color-warning)';
   return 'var(--color-ok)';
 }
+
+// Validate IPv4 address
+export function isValidIPv4(ip) {
+  if (!ip) return false;
+  const pattern =
+    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  return pattern.test(ip);
+}
+
+// Format protocol for display
+export function formatProtocol(protocol) {
+  switch (protocol) {
+    case 'tcp':
+      return 'TCP';
+    case 'udp':
+      return 'UDP';
+    case 'both':
+      return 'TCP+UDP';
+    default:
+      return protocol?.toUpperCase() || 'Unknown';
+  }
+}

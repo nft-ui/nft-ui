@@ -2,15 +2,18 @@
   import { onMount } from 'svelte';
   import {
     loadQuotas,
+    loadForwardingRules,
     loading,
     error,
     readOnly,
     refreshInterval,
     notifications,
     removeNotification,
+    isEditingModal,
   } from './lib/stores.js';
   import QuotaList from './lib/QuotaList.svelte';
   import PortList from './lib/PortList.svelte';
+  import ForwardingList from './lib/ForwardingList.svelte';
   import Toast from './lib/Toast.svelte';
   import PublicQuery from './lib/PublicQuery.svelte';
 
@@ -32,6 +35,7 @@
     // Only load data for admin route
     if (currentRoute === 'admin') {
       loadQuotas();
+      loadForwardingRules();
       startAutoRefresh();
     }
 
@@ -43,7 +47,10 @@
     const interval = $refreshInterval;
     if (interval > 0) {
       refreshTimer = setInterval(() => {
+        // Skip refresh if user is editing in a modal
+        if ($isEditingModal) return;
         loadQuotas();
+        loadForwardingRules();
       }, interval * 1000);
     }
   }
@@ -57,6 +64,7 @@
 
   function handleRefresh() {
     loadQuotas();
+    loadForwardingRules();
   }
 </script>
 
@@ -88,6 +96,7 @@
 
       <QuotaList />
       <PortList />
+      <ForwardingList />
     </main>
 
     <!-- Toast notifications -->
