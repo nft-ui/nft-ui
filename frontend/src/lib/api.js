@@ -67,3 +67,51 @@ export async function deletePort(handle) {
     method: 'DELETE',
   });
 }
+
+// Forwarding API functions
+export async function fetchForwardingRules() {
+  return request('/forwarding');
+}
+
+export async function addForwardingRule(srcPort, dstIP, dstPort, protocol, comment) {
+  return request('/forwarding', {
+    method: 'POST',
+    body: JSON.stringify({
+      src_port: srcPort,
+      dst_ip: dstIP,
+      dst_port: dstPort,
+      protocol,
+      comment,
+    }),
+  });
+}
+
+export async function editForwardingRule(id, dstIP, dstPort, protocol, comment) {
+  return request(`/forwarding/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      dst_ip: dstIP,
+      dst_port: dstPort,
+      protocol,
+      comment,
+    }),
+  });
+}
+
+export async function deleteForwardingRule(id) {
+  return request(`/forwarding/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function enableForwardingRule(id) {
+  return request(`/forwarding/${encodeURIComponent(id)}/enable`, {
+    method: 'POST',
+  });
+}
+
+export async function disableForwardingRule(id) {
+  return request(`/forwarding/${encodeURIComponent(id)}/disable`, {
+    method: 'POST',
+  });
+}

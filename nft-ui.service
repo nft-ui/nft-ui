@@ -30,6 +30,12 @@ CapabilityBoundingSet=CAP_NET_ADMIN
 #Environment=NFT_UI_AUTH_PASSWORD=changeme
 #Environment=NFT_UI_READ_ONLY=false
 #Environment=NFT_UI_REFRESH_INTERVAL=5
+#Environment=NFT_UI_NFT_BINARY=/usr/sbin/nft
+#Environment=NFT_UI_TABLE_FAMILY=inet
+#Environment=NFT_UI_TABLE_NAME=filter
+#Environment=NFT_UI_CHAIN_NAME=output
+#Environment=NFT_UI_TOKEN_SALT=your-secret-salt
+#Environment=NFT_UI_PUBLIC_QUERY=false
 
 # Or use an environment file:
 #EnvironmentFile=/etc/nft-ui/env

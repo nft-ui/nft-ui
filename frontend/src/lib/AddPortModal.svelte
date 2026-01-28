@@ -1,7 +1,13 @@
 <script>
-  import { addAllowedPort } from './stores.js';
+  import { onMount } from 'svelte';
+  import { addAllowedPort, pauseRefresh, resumeRefresh } from './stores.js';
 
   let { onclose } = $props();
+
+  onMount(() => {
+    pauseRefresh();
+    return () => resumeRefresh();
+  });
 
   let port = $state('');
   let submitting = $state(false);

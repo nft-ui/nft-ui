@@ -28,6 +28,9 @@ func main() {
 	// Initialize NFT manager
 	nftMgr := NewNFTManager(cfg)
 
+	// Initialize forwarding manager
+	fwdMgr := NewForwardingManager(cfg)
+
 	// Initialize token generator (may be nil if not configured)
 	var tokenGen *TokenGenerator
 	if cfg.TokenSalt != "" {
@@ -35,7 +38,7 @@ func main() {
 	}
 
 	// Initialize handler
-	handler := NewHandler(nftMgr, cfg, logger, tokenGen)
+	handler := NewHandler(nftMgr, fwdMgr, cfg, logger, tokenGen)
 
 	// Create Echo instance
 	e := echo.New()
@@ -78,6 +81,14 @@ func main() {
 	// Port management endpoints
 	api.POST("/ports", handler.AddPort)
 	api.DELETE("/ports/:handle", handler.DeletePort)
+
+	// Forwarding management endpoints
+	api.GET("/forwarding", handler.ListForwarding)
+	api.POST("/forwarding", handler.AddForwarding)
+	api.PUT("/forwarding/:id", handler.EditForwarding)
+	api.DELETE("/forwarding/:id", handler.DeleteForwarding)
+	api.POST("/forwarding/:id/enable", handler.EnableForwarding)
+	api.POST("/forwarding/:id/disable", handler.DisableForwarding)
 
 	// Serve frontend
 	setupFrontend(e)

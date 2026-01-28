@@ -9,33 +9,35 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	ListenAddr         string `yaml:"listen_addr"`
-	AuthUser           string `yaml:"auth_user"`
-	AuthPassword       string `yaml:"auth_password"`
-	ReadOnly           bool   `yaml:"read_only"`
-	RefreshInterval    int    `yaml:"refresh_interval"`
-	NFTBinary          string `yaml:"nft_binary"`
-	TableFamily        string `yaml:"table_family"`
-	TableName          string `yaml:"table_name"`
-	ChainName          string `yaml:"chain_name"`
-	TokenSalt          string `yaml:"token_salt"`
-	PublicQueryEnabled bool   `yaml:"public_query_enabled"`
+	ListenAddr           string `yaml:"listen_addr"`
+	AuthUser             string `yaml:"auth_user"`
+	AuthPassword         string `yaml:"auth_password"`
+	ReadOnly             bool   `yaml:"read_only"`
+	RefreshInterval      int    `yaml:"refresh_interval"`
+	NFTBinary            string `yaml:"nft_binary"`
+	TableFamily          string `yaml:"table_family"`
+	TableName            string `yaml:"table_name"`
+	ChainName            string `yaml:"chain_name"`
+	TokenSalt            string `yaml:"token_salt"`
+	PublicQueryEnabled   bool   `yaml:"public_query_enabled"`
+	DisabledForwardsPath string `yaml:"disabled_forwards_path"`
 }
 
 // DefaultConfig returns the default configuration
 func DefaultConfig() *Config {
 	return &Config{
-		ListenAddr:         ":8080",
-		AuthUser:           "",
-		AuthPassword:       "",
-		ReadOnly:           false,
-		RefreshInterval:    5,
-		NFTBinary:          "/usr/sbin/nft",
-		TableFamily:        "inet",
-		TableName:          "filter",
-		ChainName:          "output",
-		TokenSalt:          "",
-		PublicQueryEnabled: false,
+		ListenAddr:           ":8080",
+		AuthUser:             "",
+		AuthPassword:         "",
+		ReadOnly:             false,
+		RefreshInterval:      20,
+		NFTBinary:            "/usr/sbin/nft",
+		TableFamily:          "inet",
+		TableName:            "filter",
+		ChainName:            "output",
+		TokenSalt:            "",
+		PublicQueryEnabled:   false,
+		DisabledForwardsPath: "/var/lib/nft-ui/disabled-forwards.json",
 	}
 }
 
@@ -95,6 +97,9 @@ func LoadConfig() (*Config, error) {
 	}
 	if v := os.Getenv("NFT_UI_PUBLIC_QUERY"); v != "" {
 		cfg.PublicQueryEnabled = v == "true" || v == "1"
+	}
+	if v := os.Getenv("NFT_UI_DISABLED_FORWARDS_PATH"); v != "" {
+		cfg.DisabledForwardsPath = v
 	}
 
 	return cfg, nil

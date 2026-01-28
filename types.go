@@ -121,3 +121,45 @@ type NFTRule struct {
 	Expr    []map[string]interface{} `json:"expr"`
 	Comment string                   `json:"comment,omitempty"`
 }
+
+// ForwardingRule represents a port forwarding rule (DNAT + MASQUERADE)
+type ForwardingRule struct {
+	ID         string `json:"id"`          // "fwd_<srcPort>"
+	SrcPort    int    `json:"src_port"`    // Local port to forward from
+	DstIP      string `json:"dst_ip"`      // Destination IP address
+	DstPort    int    `json:"dst_port"`    // Destination port
+	Protocol   string `json:"protocol"`    // "tcp" | "udp" | "both"
+	Enabled    bool   `json:"enabled"`     // Whether the rule is active in nftables
+	Managed    bool   `json:"managed"`     // Whether the rule is managed by nft-ui (has comment)
+	Comment    string `json:"comment"`     // User-provided description
+	PreHandle  int64  `json:"pre_handle"`  // nft handle for prerouting DNAT rule
+	PostHandle int64  `json:"post_handle"` // nft handle for postrouting MASQUERADE rule
+}
+
+// AddForwardingRequest is the request body for adding a new forwarding rule
+type AddForwardingRequest struct {
+	SrcPort  int    `json:"src_port"`
+	DstIP    string `json:"dst_ip"`
+	DstPort  int    `json:"dst_port"`
+	Protocol string `json:"protocol"`
+	Comment  string `json:"comment"`
+}
+
+// EditForwardingRequest is the request body for editing a forwarding rule
+type EditForwardingRequest struct {
+	DstIP    string `json:"dst_ip"`
+	DstPort  int    `json:"dst_port"`
+	Protocol string `json:"protocol"`
+	Comment  string `json:"comment"`
+}
+
+// ForwardingResponse is the API response for listing forwarding rules
+type ForwardingResponse struct {
+	Rules    []ForwardingRule `json:"rules"`
+	ReadOnly bool             `json:"read_only"`
+}
+
+// DisabledForwardsFile represents the JSON structure for storing disabled forwarding rules
+type DisabledForwardsFile struct {
+	Rules []ForwardingRule `json:"rules"`
+}
