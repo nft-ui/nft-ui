@@ -4,6 +4,17 @@ set -e
 REPO="d3vw/nft-ui"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="nft-ui"
+BETA_MODE=false
+
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --beta)
+            BETA_MODE=true
+            shift
+            ;;
+    esac
+done
 
 # Colors
 RED='\033[0;31m'
@@ -31,8 +42,13 @@ esac
 info "Detected architecture: $ARCH"
 
 # Get latest release
-info "Fetching latest release..."
-LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+if [ "$BETA_MODE" = true ]; then
+    info "Fetching latest beta/pre-release..."
+    LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" | grep '"tag_name"' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+else
+    info "Fetching latest stable release..."
+    LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+fi
 
 if [ -z "$LATEST" ]; then
     error "Failed to get latest release"
