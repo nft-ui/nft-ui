@@ -381,7 +381,14 @@ func (h *Handler) AddForwarding(c echo.Context) error {
 		})
 	}
 
-	if err := h.fwd.AddForwardingRule(req.SrcPort, req.DstIP, req.DstPort, req.Protocol, req.Comment); err != nil {
+	if req.LimitMbps < 0 {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Limit must be >= 0 (0 = no limit)",
+		})
+	}
+
+	if err := h.fwd.AddForwardingRule(req.SrcPort, req.DstIP, req.DstPort, req.Protocol, req.Comment, req.LimitMbps); err != nil {
 		h.logger.Printf("Error adding forwarding rule: %v", err)
 		return c.JSON(http.StatusInternalServerError, APIResponse{
 			Success: false,
@@ -389,7 +396,7 @@ func (h *Handler) AddForwarding(c echo.Context) error {
 		})
 	}
 
-	h.logger.Printf("Forwarding rule added: %d -> %s:%d (%s)", req.SrcPort, req.DstIP, req.DstPort, req.Protocol)
+	h.logger.Printf("Forwarding rule added: %d -> %s:%d (%s) limit=%d Mbps", req.SrcPort, req.DstIP, req.DstPort, req.Protocol, req.LimitMbps)
 	return c.JSON(http.StatusCreated, APIResponse{
 		Success: true,
 		Message: "Forwarding rule added successfully",
@@ -422,7 +429,14 @@ func (h *Handler) EditForwarding(c echo.Context) error {
 		})
 	}
 
-	if err := h.fwd.EditForwardingRule(id, req.DstIP, req.DstPort, req.Protocol, req.Comment); err != nil {
+	if req.LimitMbps < 0 {
+		return c.JSON(http.StatusBadRequest, APIResponse{
+			Success: false,
+			Error:   "Limit must be >= 0 (0 = no limit)",
+		})
+	}
+
+	if err := h.fwd.EditForwardingRule(id, req.DstIP, req.DstPort, req.Protocol, req.Comment, req.LimitMbps); err != nil {
 		h.logger.Printf("Error editing forwarding rule %s: %v", id, err)
 		return c.JSON(http.StatusInternalServerError, APIResponse{
 			Success: false,
@@ -430,7 +444,7 @@ func (h *Handler) EditForwarding(c echo.Context) error {
 		})
 	}
 
-	h.logger.Printf("Forwarding rule edited: %s -> %s:%d (%s)", id, req.DstIP, req.DstPort, req.Protocol)
+	h.logger.Printf("Forwarding rule edited: %s -> %s:%d (%s) limit=%d Mbps", id, req.DstIP, req.DstPort, req.Protocol, req.LimitMbps)
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Forwarding rule updated successfully",
