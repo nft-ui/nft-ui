@@ -876,7 +876,7 @@ func (m *ForwardingManager) EnableForwardingRule(id string) error {
 	}
 
 	// Remove from disabled rules
-	disabledRules = append(disabledRules[:idx], disabledRules[idx+1]...)
+	disabledRules = append(disabledRules[:idx], disabledRules[idx+1:]...)
 	return m.saveDisabledRules(disabledRules)
 }
 
