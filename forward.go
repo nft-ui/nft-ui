@@ -51,6 +51,30 @@ func (m *ForwardingManager) execNFT(args ...string) ([]byte, error) {
 	return output, nil
 }
 
+// EnsureFilterForwardSetup ensures the filter table and forward chain exist
+func (m *ForwardingManager) EnsureFilterForwardSetup() error {
+	// Check if filter table exists
+	_, err := m.execNFT("list", "table", "ip", "filter")
+	if err != nil {
+		// Create filter table
+		if _, err := m.execNFT("add", "table", "ip", "filter"); err != nil {
+			return fmt.Errorf("failed to create filter table: %w", err)
+		}
+	}
+
+	// Check if forward chain exists
+	_, err = m.execNFT("list", "chain", "ip", "filter", "forward")
+	if err != nil {
+		// Create forward chain
+		if _, err := m.execNFT("add", "chain", "ip", "filter", "forward",
+			"{ type filter hook forward priority filter ; policy accept ; }"); err != nil {
+			return fmt.Errorf("failed to create forward chain: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // EnsureNatSetup ensures the nat table and required chains exist
 func (m *ForwardingManager) EnsureNatSetup() error {
 	// Check if nat table exists by trying to list it
@@ -123,6 +147,16 @@ func (m *ForwardingManager) ListForwardingRules() ([]ForwardingRule, error) {
 		return nil, err
 	}
 
+	// Get limit information from filter forward chain
+	limitMap := m.extractLimitsFromForwardChain()
+
+	// Apply limits to enabled rules
+	for i := range enabledRules {
+		if limit, ok := limitMap[enabledRules[i].SrcPort]; ok {
+			enabledRules[i].LimitMbps = limit
+		}
+	}
+
 	// Load disabled rules from file
 	disabledRules, err := m.loadDisabledRules()
 	if err != nil {
@@ -133,6 +167,53 @@ func (m *ForwardingManager) ListForwardingRules() ([]ForwardingRule, error) {
 	// Merge enabled and disabled rules
 	allRules := append(enabledRules, disabledRules...)
 	return allRules, nil
+}
+
+// extractLimitsFromForwardChain extracts bandwidth limits from filter forward chain
+func (m *ForwardingManager) extractLimitsFromForwardChain() map[int]int {
+	limitMap := make(map[int]int)
+
+	output, err := m.execNFT("-j", "-a", "list", "chain", "ip", "filter", "forward")
+	if err != nil {
+		// Chain might not exist, return empty map
+		return limitMap
+	}
+
+	var ruleset NFTRuleset
+	if err := json.Unmarshal(output, &ruleset); err != nil {
+		return limitMap
+	}
+
+	for _, obj := range ruleset.NFTables {
+		if obj.Rule == nil || obj.Rule.Chain != "forward" {
+			continue
+		}
+
+		// Only process rules with our comment
+		if !strings.HasPrefix(obj.Rule.Comment, ForwardingComment) {
+			continue
+		}
+
+		// Extract source port from comment
+		srcPort := m.extractSrcPortFromComment(obj.Rule.Comment)
+		if srcPort == 0 {
+			continue
+		}
+
+		// Look for limit expression
+		for _, expr := range obj.Rule.Expr {
+			if limitData, ok := expr["limit"]; ok {
+				if lm, ok := limitData.(map[string]interface{}); ok {
+					if rate, ok := lm["rate"].(float64); ok {
+						limitMap[srcPort] = int(rate)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return limitMap
 }
 
 // parseForwardingRules parses JSON output from prerouting and postrouting chains
@@ -207,19 +288,8 @@ func (m *ForwardingManager) extractForwardingRule(rule *NFTRule) *ForwardingRule
 	var srcPort, dstPort int
 	var dstIP string
 	var protocol string
-	var limitMbps int
 
 	for _, expr := range rule.Expr {
-		// Look for limit expression
-		if limitData, ok := expr["limit"]; ok {
-			if lm, ok := limitData.(map[string]interface{}); ok {
-				// Extract rate value (in mbytes/second)
-				if rate, ok := lm["rate"].(float64); ok {
-					limitMbps = int(rate)
-				}
-			}
-		}
-
 		// Look for protocol meta match
 		if metaData, ok := expr["match"]; ok {
 			if mm, ok := metaData.(map[string]interface{}); ok {
@@ -315,13 +385,13 @@ func (m *ForwardingManager) extractForwardingRule(rule *NFTRule) *ForwardingRule
 	}
 
 	return &ForwardingRule{
-		ID:        fmt.Sprintf("fwd_%d", srcPort),
-		SrcPort:   srcPort,
-		DstIP:     dstIP,
-		DstPort:   dstPort,
-		Protocol:  protocol,
-		Comment:   userComment,
-		LimitMbps: limitMbps,
+		ID:       fmt.Sprintf("fwd_%d", srcPort),
+		SrcPort:  srcPort,
+		DstIP:    dstIP,
+		DstPort:  dstPort,
+		Protocol: protocol,
+		Comment:  userComment,
+		// LimitMbps will be filled by extractLimitsFromForwardChain()
 	}
 }
 
@@ -401,10 +471,19 @@ func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort
 		return fmt.Errorf("failed to add output DNAT rule: %w", err)
 	}
 
+	// Add bandwidth limit rules in filter forward chain (if limit > 0)
+	if err := m.addForwardLimitRules(dstIP, dstPort, protocol, fullComment, limitMbps); err != nil {
+		// Rollback: delete previous rules
+		m.deleteDNATRuleBySrcPort(srcPort)
+		m.deleteMasqueradeRuleBySrcPort(srcPort)
+		m.deleteOutputDNATRuleBySrcPort(srcPort)
+		return fmt.Errorf("failed to add forward limit rules: %w", err)
+	}
+
 	return nil
 }
 
-// addDNATRule adds a prerouting DNAT rule
+// addDNATRule adds a prerouting DNAT rule (without limit - limit goes in filter forward)
 func (m *ForwardingManager) addDNATRule(srcPort int, dstIP string, dstPort int, protocol string, comment string, limitMbps int) error {
 	var args []string
 
@@ -413,32 +492,25 @@ func (m *ForwardingManager) addDNATRule(srcPort int, dstIP string, dstPort int, 
 		args = []string{
 			"add", "rule", "ip", "nat", "prerouting",
 			"tcp", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	case "udp":
 		args = []string{
 			"add", "rule", "ip", "nat", "prerouting",
 			"udp", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	default: // "both"
 		args = []string{
 			"add", "rule", "ip", "nat", "prerouting",
 			"meta", "l4proto", "{", "tcp,", "udp", "}",
 			"th", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	}
-
-	// Add limit if specified (in Mbps)
-	if limitMbps > 0 {
-		// Convert Mbps to bytes/second for nftables
-		// limit rate <value> mbytes/second
-		args = append(args, "limit", "rate", strconv.Itoa(limitMbps), "mbytes/second")
-	}
-
-	// Add DNAT target
-	args = append(args, "dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort))
-
-	// Add comment
-	args = append(args, "comment", fmt.Sprintf(`"%s"`, comment))
 
 	_, err := m.execNFT(args...)
 	return err
@@ -480,7 +552,7 @@ func (m *ForwardingManager) addMasqueradeRule(dstIP string, dstPort int, protoco
 	return err
 }
 
-// addOutputDNATRule adds an output chain DNAT rule for local traffic
+// addOutputDNATRule adds an output chain DNAT rule for local traffic (without limit)
 func (m *ForwardingManager) addOutputDNATRule(srcPort int, dstIP string, dstPort int, protocol string, comment string, limitMbps int) error {
 	var args []string
 
@@ -489,33 +561,130 @@ func (m *ForwardingManager) addOutputDNATRule(srcPort int, dstIP string, dstPort
 		args = []string{
 			"add", "rule", "ip", "nat", "output",
 			"tcp", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	case "udp":
 		args = []string{
 			"add", "rule", "ip", "nat", "output",
 			"udp", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	default: // "both"
 		args = []string{
 			"add", "rule", "ip", "nat", "output",
 			"meta", "l4proto", "{", "tcp,", "udp", "}",
 			"th", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	}
 
-	// Add limit if specified (in Mbps)
-	if limitMbps > 0 {
-		args = append(args, "limit", "rate", strconv.Itoa(limitMbps), "mbytes/second")
-	}
-
-	// Add DNAT target
-	args = append(args, "dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort))
-
-	// Add comment
-	args = append(args, "comment", fmt.Sprintf(`"%s"`, comment))
-
 	_, err := m.execNFT(args...)
 	return err
+}
+
+// addForwardLimitRules adds bandwidth limit rules in filter forward chain (bidirectional)
+func (m *ForwardingManager) addForwardLimitRules(dstIP string, dstPort int, protocol string, comment string, limitMbps int) error {
+	if limitMbps <= 0 {
+		return nil // No limit needed
+	}
+
+	// Ensure filter table and forward chain exist
+	if err := m.EnsureFilterForwardSetup(); err != nil {
+		return err
+	}
+
+	// Outbound limit (to destination)
+	switch protocol {
+	case "tcp":
+		// TCP outbound
+		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
+			"ip", "daddr", dstIP, "tcp", "dport", strconv.Itoa(dstPort),
+			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
+			return fmt.Errorf("failed to add TCP outbound limit: %w", err)
+		}
+		// TCP inbound
+		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
+			"ip", "saddr", dstIP, "tcp", "sport", strconv.Itoa(dstPort),
+			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
+			return fmt.Errorf("failed to add TCP inbound limit: %w", err)
+		}
+	case "udp":
+		// UDP outbound
+		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
+			"ip", "daddr", dstIP, "udp", "dport", strconv.Itoa(dstPort),
+			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
+			return fmt.Errorf("failed to add UDP outbound limit: %w", err)
+		}
+		// UDP inbound
+		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
+			"ip", "saddr", dstIP, "udp", "sport", strconv.Itoa(dstPort),
+			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
+			return fmt.Errorf("failed to add UDP inbound limit: %w", err)
+		}
+	default: // "both"
+		// Both TCP/UDP outbound
+		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
+			"ip", "daddr", dstIP, "meta", "l4proto", "{", "tcp,", "udp", "}",
+			"th", "dport", strconv.Itoa(dstPort),
+			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
+			return fmt.Errorf("failed to add outbound limit: %w", err)
+		}
+		// Both TCP/UDP inbound
+		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
+			"ip", "saddr", dstIP, "meta", "l4proto", "{", "tcp,", "udp", "}",
+			"th", "sport", strconv.Itoa(dstPort),
+			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
+			return fmt.Errorf("failed to add inbound limit: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// deleteForwardLimitRules deletes bandwidth limit rules from filter forward chain
+func (m *ForwardingManager) deleteForwardLimitRules(srcPort int) error {
+	output, err := m.execNFT("-j", "-a", "list", "chain", "ip", "filter", "forward")
+	if err != nil {
+		// Chain might not exist, ignore
+		return nil
+	}
+
+	var ruleset NFTRuleset
+	if err := json.Unmarshal(output, &ruleset); err != nil {
+		return err
+	}
+
+	// Find and delete all limit rules with matching comment
+	commentPrefix := fmt.Sprintf("%s %d", ForwardingComment, srcPort)
+	for _, obj := range ruleset.NFTables {
+		if obj.Rule == nil || obj.Rule.Chain != "forward" {
+			continue
+		}
+		if strings.HasPrefix(obj.Rule.Comment, commentPrefix) {
+			// Check if this rule has a limit expression
+			hasLimit := false
+			for _, expr := range obj.Rule.Expr {
+				if _, ok := expr["limit"]; ok {
+					hasLimit = true
+					break
+				}
+			}
+			if hasLimit {
+				m.execNFT("delete", "rule", "ip", "filter", "forward", "handle", strconv.FormatInt(obj.Rule.Handle, 10))
+			}
+		}
+	}
+
+	return nil
 }
 
 // DeleteForwardingRule deletes a forwarding rule by ID
@@ -552,6 +721,11 @@ func (m *ForwardingManager) DeleteForwardingRule(id string) error {
 	if err := m.deleteOutputDNATRuleBySrcPort(srcPort); err != nil {
 		// Log warning but don't fail
 		fmt.Printf("Warning: failed to delete output DNAT rule: %v\n", err)
+	}
+
+	if err := m.deleteForwardLimitRules(srcPort); err != nil {
+		// Log warning but don't fail
+		fmt.Printf("Warning: failed to delete forward limit rules: %v\n", err)
 	}
 
 	return nil
@@ -603,6 +777,7 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 	m.deleteDNATRuleBySrcPort(srcPort)
 	m.deleteMasqueradeRuleBySrcPort(srcPort)
 	m.deleteOutputDNATRuleBySrcPort(srcPort)
+	m.deleteForwardLimitRules(srcPort)
 
 	// Build comment string
 	fullComment := fmt.Sprintf("%s %d", ForwardingComment, srcPort)
@@ -624,6 +799,13 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 		m.deleteDNATRuleBySrcPort(srcPort)
 		m.deleteMasqueradeRuleBySrcPort(srcPort)
 		return fmt.Errorf("failed to add output DNAT rule: %w", err)
+	}
+
+	if err := m.addForwardLimitRules(dstIP, dstPort, protocol, fullComment, limitMbps); err != nil {
+		m.deleteDNATRuleBySrcPort(srcPort)
+		m.deleteMasqueradeRuleBySrcPort(srcPort)
+		m.deleteOutputDNATRuleBySrcPort(srcPort)
+		return fmt.Errorf("failed to add forward limit rules: %w", err)
 	}
 
 	return nil
@@ -686,8 +868,15 @@ func (m *ForwardingManager) EnableForwardingRule(id string) error {
 		return fmt.Errorf("failed to add output DNAT rule: %w", err)
 	}
 
+	if err := m.addForwardLimitRules(rule.DstIP, rule.DstPort, rule.Protocol, fullComment, rule.LimitMbps); err != nil {
+		m.deleteDNATRuleBySrcPort(rule.SrcPort)
+		m.deleteMasqueradeRuleBySrcPort(rule.SrcPort)
+		m.deleteOutputDNATRuleBySrcPort(rule.SrcPort)
+		return fmt.Errorf("failed to add forward limit rules: %w", err)
+	}
+
 	// Remove from disabled rules
-	disabledRules = append(disabledRules[:idx], disabledRules[idx+1:]...)
+	disabledRules = append(disabledRules[:idx], disabledRules[idx+1]...)
 	return m.saveDisabledRules(disabledRules)
 }
 
@@ -726,8 +915,9 @@ func (m *ForwardingManager) DisableForwardingRule(id string) error {
 	if err := m.deleteDNATRuleBySrcPort(srcPort); err != nil {
 		return fmt.Errorf("failed to delete DNAT rule: %w", err)
 	}
-	m.deleteMasqueradeRuleBySrcPort(srcPort) // Ignore errors
-	m.deleteOutputDNATRuleBySrcPort(srcPort) // Ignore errors
+	m.deleteMasqueradeRuleBySrcPort(srcPort)   // Ignore errors
+	m.deleteOutputDNATRuleBySrcPort(srcPort)   // Ignore errors
+	m.deleteForwardLimitRules(srcPort)         // Ignore errors
 
 	// Save to disabled rules
 	disabledRules, _ := m.loadDisabledRules()
