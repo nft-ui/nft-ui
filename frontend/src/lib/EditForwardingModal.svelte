@@ -14,6 +14,7 @@
   let dstPort = $state(rule.dst_port.toString());
   let protocol = $state(rule.protocol);
   let comment = $state(rule.comment || '');
+  let limitMbps = $state((rule.limit_mbps || 0).toString());
   let submitting = $state(false);
   let errors = $state({});
 
@@ -27,6 +28,11 @@
     const dstPortNum = parseInt(dstPort, 10);
     if (isNaN(dstPortNum) || dstPortNum < 1 || dstPortNum > 65535) {
       newErrors.dstPort = 'Destination port must be between 1 and 65535';
+    }
+
+    const limitNum = parseInt(limitMbps, 10);
+    if (isNaN(limitNum) || limitNum < 0) {
+      newErrors.limitMbps = 'Limit must be 0 or positive (0 = no limit)';
     }
 
     errors = newErrors;
@@ -43,7 +49,8 @@
         dstIP,
         parseInt(dstPort, 10),
         protocol,
-        comment
+        comment,
+        parseInt(limitMbps, 10)
       );
       onclose?.();
     } catch (e) {
@@ -124,6 +131,22 @@
           placeholder="e.g. SSH tunnel"
           maxlength="100"
         />
+      </div>
+
+      <div class="form-group">
+        <label for="limitMbps">Bandwidth Limit (Mbps)</label>
+        <input
+          type="number"
+          id="limitMbps"
+          bind:value={limitMbps}
+          placeholder="0"
+          min="0"
+          class:error={errors.limitMbps}
+        />
+        {#if errors.limitMbps}
+          <span class="error-text">{errors.limitMbps}</span>
+        {/if}
+        <span class="help-text">0 = no limit, or set max Mbps (e.g. 10, 100)</span>
       </div>
 
       <div class="note">

@@ -207,8 +207,19 @@ func (m *ForwardingManager) extractForwardingRule(rule *NFTRule) *ForwardingRule
 	var srcPort, dstPort int
 	var dstIP string
 	var protocol string
+	var limitMbps int
 
 	for _, expr := range rule.Expr {
+		// Look for limit expression
+		if limitData, ok := expr["limit"]; ok {
+			if lm, ok := limitData.(map[string]interface{}); ok {
+				// Extract rate value (in mbytes/second)
+				if rate, ok := lm["rate"].(float64); ok {
+					limitMbps = int(rate)
+				}
+			}
+		}
+
 		// Look for protocol meta match
 		if metaData, ok := expr["match"]; ok {
 			if mm, ok := metaData.(map[string]interface{}); ok {
@@ -304,17 +315,18 @@ func (m *ForwardingManager) extractForwardingRule(rule *NFTRule) *ForwardingRule
 	}
 
 	return &ForwardingRule{
-		ID:       fmt.Sprintf("fwd_%d", srcPort),
-		SrcPort:  srcPort,
-		DstIP:    dstIP,
-		DstPort:  dstPort,
-		Protocol: protocol,
-		Comment:  userComment,
+		ID:        fmt.Sprintf("fwd_%d", srcPort),
+		SrcPort:   srcPort,
+		DstIP:     dstIP,
+		DstPort:   dstPort,
+		Protocol:  protocol,
+		Comment:   userComment,
+		LimitMbps: limitMbps,
 	}
 }
 
 // AddForwardingRule adds a new port forwarding rule
-func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort int, protocol string, comment string) error {
+func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort int, protocol string, comment string, limitMbps int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -358,6 +370,11 @@ func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort
 		}
 	}
 
+	// Validate limit
+	if limitMbps < 0 {
+		return fmt.Errorf("invalid limit: %d (must be >= 0)", limitMbps)
+	}
+
 	// Build comment string
 	fullComment := fmt.Sprintf("%s %d", ForwardingComment, srcPort)
 	if comment != "" {
@@ -365,7 +382,7 @@ func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort
 	}
 
 	// Add prerouting DNAT rule
-	if err := m.addDNATRule(srcPort, dstIP, dstPort, protocol, fullComment); err != nil {
+	if err := m.addDNATRule(srcPort, dstIP, dstPort, protocol, fullComment, limitMbps); err != nil {
 		return fmt.Errorf("failed to add DNAT rule: %w", err)
 	}
 
@@ -377,7 +394,7 @@ func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort
 	}
 
 	// Add output DNAT rule for local traffic
-	if err := m.addOutputDNATRule(srcPort, dstIP, dstPort, protocol, fullComment); err != nil {
+	if err := m.addOutputDNATRule(srcPort, dstIP, dstPort, protocol, fullComment, limitMbps); err != nil {
 		// Rollback: delete previous rules
 		m.deleteDNATRuleBySrcPort(srcPort)
 		m.deleteMasqueradeRuleBySrcPort(srcPort)
@@ -388,7 +405,7 @@ func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort
 }
 
 // addDNATRule adds a prerouting DNAT rule
-func (m *ForwardingManager) addDNATRule(srcPort int, dstIP string, dstPort int, protocol string, comment string) error {
+func (m *ForwardingManager) addDNATRule(srcPort int, dstIP string, dstPort int, protocol string, comment string, limitMbps int) error {
 	var args []string
 
 	switch protocol {
@@ -396,25 +413,32 @@ func (m *ForwardingManager) addDNATRule(srcPort int, dstIP string, dstPort int, 
 		args = []string{
 			"add", "rule", "ip", "nat", "prerouting",
 			"tcp", "dport", strconv.Itoa(srcPort),
-			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
-			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	case "udp":
 		args = []string{
 			"add", "rule", "ip", "nat", "prerouting",
 			"udp", "dport", strconv.Itoa(srcPort),
-			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
-			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	default: // "both"
 		args = []string{
 			"add", "rule", "ip", "nat", "prerouting",
 			"meta", "l4proto", "{", "tcp,", "udp", "}",
 			"th", "dport", strconv.Itoa(srcPort),
-			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
-			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	}
+
+	// Add limit if specified (in Mbps)
+	if limitMbps > 0 {
+		// Convert Mbps to bytes/second for nftables
+		// limit rate <value> mbytes/second
+		args = append(args, "limit", "rate", strconv.Itoa(limitMbps), "mbytes/second")
+	}
+
+	// Add DNAT target
+	args = append(args, "dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort))
+
+	// Add comment
+	args = append(args, "comment", fmt.Sprintf(`"%s"`, comment))
 
 	_, err := m.execNFT(args...)
 	return err
@@ -457,7 +481,7 @@ func (m *ForwardingManager) addMasqueradeRule(dstIP string, dstPort int, protoco
 }
 
 // addOutputDNATRule adds an output chain DNAT rule for local traffic
-func (m *ForwardingManager) addOutputDNATRule(srcPort int, dstIP string, dstPort int, protocol string, comment string) error {
+func (m *ForwardingManager) addOutputDNATRule(srcPort int, dstIP string, dstPort int, protocol string, comment string, limitMbps int) error {
 	var args []string
 
 	switch protocol {
@@ -465,25 +489,30 @@ func (m *ForwardingManager) addOutputDNATRule(srcPort int, dstIP string, dstPort
 		args = []string{
 			"add", "rule", "ip", "nat", "output",
 			"tcp", "dport", strconv.Itoa(srcPort),
-			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
-			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	case "udp":
 		args = []string{
 			"add", "rule", "ip", "nat", "output",
 			"udp", "dport", strconv.Itoa(srcPort),
-			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
-			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	default: // "both"
 		args = []string{
 			"add", "rule", "ip", "nat", "output",
 			"meta", "l4proto", "{", "tcp,", "udp", "}",
 			"th", "dport", strconv.Itoa(srcPort),
-			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
-			"comment", fmt.Sprintf(`"%s"`, comment),
 		}
 	}
+
+	// Add limit if specified (in Mbps)
+	if limitMbps > 0 {
+		args = append(args, "limit", "rate", strconv.Itoa(limitMbps), "mbytes/second")
+	}
+
+	// Add DNAT target
+	args = append(args, "dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort))
+
+	// Add comment
+	args = append(args, "comment", fmt.Sprintf(`"%s"`, comment))
 
 	_, err := m.execNFT(args...)
 	return err
@@ -529,7 +558,7 @@ func (m *ForwardingManager) DeleteForwardingRule(id string) error {
 }
 
 // EditForwardingRule modifies an existing forwarding rule
-func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort int, protocol string, comment string) error {
+func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort int, protocol string, comment string, limitMbps int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -549,6 +578,9 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 	if protocol != "tcp" && protocol != "udp" && protocol != "both" {
 		return fmt.Errorf("invalid protocol: %s", protocol)
 	}
+	if limitMbps < 0 {
+		return fmt.Errorf("invalid limit: %d (must be >= 0)", limitMbps)
+	}
 
 	comment = sanitizeComment(comment)
 
@@ -561,6 +593,7 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 			disabledRules[i].DstPort = dstPort
 			disabledRules[i].Protocol = protocol
 			disabledRules[i].Comment = comment
+			disabledRules[i].LimitMbps = limitMbps
 			return m.saveDisabledRules(disabledRules)
 		}
 	}
@@ -578,7 +611,7 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 	}
 
 	// Add new rules
-	if err := m.addDNATRule(srcPort, dstIP, dstPort, protocol, fullComment); err != nil {
+	if err := m.addDNATRule(srcPort, dstIP, dstPort, protocol, fullComment, limitMbps); err != nil {
 		return fmt.Errorf("failed to add DNAT rule: %w", err)
 	}
 
@@ -587,7 +620,7 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 		return fmt.Errorf("failed to add MASQUERADE rule: %w", err)
 	}
 
-	if err := m.addOutputDNATRule(srcPort, dstIP, dstPort, protocol, fullComment); err != nil {
+	if err := m.addOutputDNATRule(srcPort, dstIP, dstPort, protocol, fullComment, limitMbps); err != nil {
 		m.deleteDNATRuleBySrcPort(srcPort)
 		m.deleteMasqueradeRuleBySrcPort(srcPort)
 		return fmt.Errorf("failed to add output DNAT rule: %w", err)
@@ -638,7 +671,7 @@ func (m *ForwardingManager) EnableForwardingRule(id string) error {
 	}
 
 	// Create nftables rules
-	if err := m.addDNATRule(rule.SrcPort, rule.DstIP, rule.DstPort, rule.Protocol, fullComment); err != nil {
+	if err := m.addDNATRule(rule.SrcPort, rule.DstIP, rule.DstPort, rule.Protocol, fullComment, rule.LimitMbps); err != nil {
 		return fmt.Errorf("failed to add DNAT rule: %w", err)
 	}
 
@@ -647,7 +680,7 @@ func (m *ForwardingManager) EnableForwardingRule(id string) error {
 		return fmt.Errorf("failed to add MASQUERADE rule: %w", err)
 	}
 
-	if err := m.addOutputDNATRule(rule.SrcPort, rule.DstIP, rule.DstPort, rule.Protocol, fullComment); err != nil {
+	if err := m.addOutputDNATRule(rule.SrcPort, rule.DstIP, rule.DstPort, rule.Protocol, fullComment, rule.LimitMbps); err != nil {
 		m.deleteDNATRuleBySrcPort(rule.SrcPort)
 		m.deleteMasqueradeRuleBySrcPort(rule.SrcPort)
 		return fmt.Errorf("failed to add output DNAT rule: %w", err)
