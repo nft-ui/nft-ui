@@ -205,7 +205,10 @@ func (m *ForwardingManager) extractLimitsFromForwardChain() map[int]int {
 			if limitData, ok := expr["limit"]; ok {
 				if lm, ok := limitData.(map[string]interface{}); ok {
 					if rate, ok := lm["rate"].(float64); ok {
-						limitMap[srcPort] = int(rate)
+						// Convert kbytes/second back to Mbps
+						// rate is in kbytes/s, convert: kbytes/s * 8 / 1000 = Mbps
+						limitMbps := int((rate * 8) / 1000)
+						limitMap[srcPort] = limitMbps
 						break
 					}
 				}
@@ -591,6 +594,10 @@ func (m *ForwardingManager) addForwardLimitRules(dstIP string, dstPort int, prot
 		return nil // No limit needed
 	}
 
+	// Convert Mbps to kbytes/second for nftables
+	// 1 Mbps = 1000 kbits/s = 125 KByte/s (using 1000-based conversion for network speeds)
+	limitKbytes := (limitMbps * 1000) / 8
+
 	// Ensure filter table and forward chain exist
 	if err := m.EnsureFilterForwardSetup(); err != nil {
 		return err
@@ -602,14 +609,14 @@ func (m *ForwardingManager) addForwardLimitRules(dstIP string, dstPort int, prot
 		// TCP outbound
 		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
 			"ip", "daddr", dstIP, "tcp", "dport", strconv.Itoa(dstPort),
-			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"limit", "rate", "over", strconv.Itoa(limitKbytes), "kbytes/second",
 			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
 			return fmt.Errorf("failed to add TCP outbound limit: %w", err)
 		}
 		// TCP inbound
 		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
 			"ip", "saddr", dstIP, "tcp", "sport", strconv.Itoa(dstPort),
-			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"limit", "rate", "over", strconv.Itoa(limitKbytes), "kbytes/second",
 			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
 			return fmt.Errorf("failed to add TCP inbound limit: %w", err)
 		}
@@ -617,14 +624,14 @@ func (m *ForwardingManager) addForwardLimitRules(dstIP string, dstPort int, prot
 		// UDP outbound
 		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
 			"ip", "daddr", dstIP, "udp", "dport", strconv.Itoa(dstPort),
-			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"limit", "rate", "over", strconv.Itoa(limitKbytes), "kbytes/second",
 			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
 			return fmt.Errorf("failed to add UDP outbound limit: %w", err)
 		}
 		// UDP inbound
 		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
 			"ip", "saddr", dstIP, "udp", "sport", strconv.Itoa(dstPort),
-			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"limit", "rate", "over", strconv.Itoa(limitKbytes), "kbytes/second",
 			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
 			return fmt.Errorf("failed to add UDP inbound limit: %w", err)
 		}
@@ -633,7 +640,7 @@ func (m *ForwardingManager) addForwardLimitRules(dstIP string, dstPort int, prot
 		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
 			"ip", "daddr", dstIP, "meta", "l4proto", "{", "tcp,", "udp", "}",
 			"th", "dport", strconv.Itoa(dstPort),
-			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"limit", "rate", "over", strconv.Itoa(limitKbytes), "kbytes/second",
 			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
 			return fmt.Errorf("failed to add outbound limit: %w", err)
 		}
@@ -641,7 +648,7 @@ func (m *ForwardingManager) addForwardLimitRules(dstIP string, dstPort int, prot
 		if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
 			"ip", "saddr", dstIP, "meta", "l4proto", "{", "tcp,", "udp", "}",
 			"th", "sport", strconv.Itoa(dstPort),
-			"limit", "rate", "over", strconv.Itoa(limitMbps), "mbytes/second",
+			"limit", "rate", "over", strconv.Itoa(limitKbytes), "kbytes/second",
 			"drop", "comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
 			return fmt.Errorf("failed to add inbound limit: %w", err)
 		}
