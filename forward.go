@@ -82,6 +82,16 @@ func (m *ForwardingManager) EnsureNatSetup() error {
 		}
 	}
 
+	// Check if output chain exists
+	_, err = m.execNFT("list", "chain", "ip", "nat", "output")
+	if err != nil {
+		// Create output chain
+		if _, err := m.execNFT("add", "chain", "ip", "nat", "output",
+			"{ type nat hook output priority dstnat ; policy accept ; }"); err != nil {
+			return fmt.Errorf("failed to create output chain: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -366,6 +376,14 @@ func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort
 		return fmt.Errorf("failed to add MASQUERADE rule: %w", err)
 	}
 
+	// Add output DNAT rule for local traffic
+	if err := m.addOutputDNATRule(srcPort, dstIP, dstPort, protocol, fullComment); err != nil {
+		// Rollback: delete previous rules
+		m.deleteDNATRuleBySrcPort(srcPort)
+		m.deleteMasqueradeRuleBySrcPort(srcPort)
+		return fmt.Errorf("failed to add output DNAT rule: %w", err)
+	}
+
 	return nil
 }
 
@@ -438,6 +456,39 @@ func (m *ForwardingManager) addMasqueradeRule(dstIP string, dstPort int, protoco
 	return err
 }
 
+// addOutputDNATRule adds an output chain DNAT rule for local traffic
+func (m *ForwardingManager) addOutputDNATRule(srcPort int, dstIP string, dstPort int, protocol string, comment string) error {
+	var args []string
+
+	switch protocol {
+	case "tcp":
+		args = []string{
+			"add", "rule", "ip", "nat", "output",
+			"tcp", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
+		}
+	case "udp":
+		args = []string{
+			"add", "rule", "ip", "nat", "output",
+			"udp", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
+		}
+	default: // "both"
+		args = []string{
+			"add", "rule", "ip", "nat", "output",
+			"meta", "l4proto", "{", "tcp,", "udp", "}",
+			"th", "dport", strconv.Itoa(srcPort),
+			"dnat", "to", fmt.Sprintf("%s:%d", dstIP, dstPort),
+			"comment", fmt.Sprintf(`"%s"`, comment),
+		}
+	}
+
+	_, err := m.execNFT(args...)
+	return err
+}
+
 // DeleteForwardingRule deletes a forwarding rule by ID
 func (m *ForwardingManager) DeleteForwardingRule(id string) error {
 	m.mu.Lock()
@@ -467,6 +518,11 @@ func (m *ForwardingManager) DeleteForwardingRule(id string) error {
 	if err := m.deleteMasqueradeRuleBySrcPort(srcPort); err != nil {
 		// Log warning but don't fail
 		fmt.Printf("Warning: failed to delete MASQUERADE rule: %v\n", err)
+	}
+
+	if err := m.deleteOutputDNATRuleBySrcPort(srcPort); err != nil {
+		// Log warning but don't fail
+		fmt.Printf("Warning: failed to delete output DNAT rule: %v\n", err)
 	}
 
 	return nil
@@ -513,6 +569,7 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 	// Delete existing rules
 	m.deleteDNATRuleBySrcPort(srcPort)
 	m.deleteMasqueradeRuleBySrcPort(srcPort)
+	m.deleteOutputDNATRuleBySrcPort(srcPort)
 
 	// Build comment string
 	fullComment := fmt.Sprintf("%s %d", ForwardingComment, srcPort)
@@ -528,6 +585,12 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 	if err := m.addMasqueradeRule(dstIP, dstPort, protocol, fullComment); err != nil {
 		m.deleteDNATRuleBySrcPort(srcPort)
 		return fmt.Errorf("failed to add MASQUERADE rule: %w", err)
+	}
+
+	if err := m.addOutputDNATRule(srcPort, dstIP, dstPort, protocol, fullComment); err != nil {
+		m.deleteDNATRuleBySrcPort(srcPort)
+		m.deleteMasqueradeRuleBySrcPort(srcPort)
+		return fmt.Errorf("failed to add output DNAT rule: %w", err)
 	}
 
 	return nil
@@ -584,6 +647,12 @@ func (m *ForwardingManager) EnableForwardingRule(id string) error {
 		return fmt.Errorf("failed to add MASQUERADE rule: %w", err)
 	}
 
+	if err := m.addOutputDNATRule(rule.SrcPort, rule.DstIP, rule.DstPort, rule.Protocol, fullComment); err != nil {
+		m.deleteDNATRuleBySrcPort(rule.SrcPort)
+		m.deleteMasqueradeRuleBySrcPort(rule.SrcPort)
+		return fmt.Errorf("failed to add output DNAT rule: %w", err)
+	}
+
 	// Remove from disabled rules
 	disabledRules = append(disabledRules[:idx], disabledRules[idx+1:]...)
 	return m.saveDisabledRules(disabledRules)
@@ -625,6 +694,7 @@ func (m *ForwardingManager) DisableForwardingRule(id string) error {
 		return fmt.Errorf("failed to delete DNAT rule: %w", err)
 	}
 	m.deleteMasqueradeRuleBySrcPort(srcPort) // Ignore errors
+	m.deleteOutputDNATRuleBySrcPort(srcPort) // Ignore errors
 
 	// Save to disabled rules
 	disabledRules, _ := m.loadDisabledRules()
@@ -701,6 +771,30 @@ func (m *ForwardingManager) deleteMasqueradeRuleBySrcPort(srcPort int) error {
 	}
 
 	return errors.New("MASQUERADE rule not found")
+}
+
+func (m *ForwardingManager) deleteOutputDNATRuleBySrcPort(srcPort int) error {
+	output, err := m.execNFT("-j", "-a", "list", "chain", "ip", "nat", "output")
+	if err != nil {
+		return err
+	}
+
+	var ruleset NFTRuleset
+	if err := json.Unmarshal(output, &ruleset); err != nil {
+		return err
+	}
+
+	for _, obj := range ruleset.NFTables {
+		if obj.Rule == nil || obj.Rule.Chain != "output" {
+			continue
+		}
+		if strings.HasPrefix(obj.Rule.Comment, fmt.Sprintf("%s %d", ForwardingComment, srcPort)) {
+			_, err := m.execNFT("delete", "rule", "ip", "nat", "output", "handle", strconv.FormatInt(obj.Rule.Handle, 10))
+			return err
+		}
+	}
+
+	return errors.New("output DNAT rule not found")
 }
 
 func (m *ForwardingManager) loadDisabledRules() ([]ForwardingRule, error) {
