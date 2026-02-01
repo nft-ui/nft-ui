@@ -89,6 +89,12 @@
         <span class="label">Managed:</span>
         <span class="value">{rule.managed ? 'Yes (nft-ui)' : 'No (external)'}</span>
       </div>
+      {#if rule.limit_mbps > 0}
+        <div class="detail-row">
+          <span class="label">Bandwidth Limit:</span>
+          <span class="value">{rule.limit_mbps} Mbps</span>
+        </div>
+      {/if}
 
       {#if !$readOnly && rule.managed}
         <div class="actions">
