@@ -1,4 +1,10 @@
-# nft-ui
+<div align="center">
+  <img src="https://avatars.githubusercontent.com/u/258744129?s=200&v=4" alt="nft-ui logo" width="200"/>
+  
+  # nft-ui
+  
+  [![Release](https://github.com/nft-ui/nft-ui/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/nft-ui/nft-ui/actions/workflows/release.yml)
+</div>
 
 A web-based UI for managing nftables outbound traffic quotas.
 
