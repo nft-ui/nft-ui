@@ -17,8 +17,14 @@ A web-based UI for managing nftables outbound traffic quotas.
 
 ### Quick Install
 
+**Stable (main branch):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/d3vw/nft-ui/main/install.sh | sudo bash
+```
+
+**Beta (dev branch):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/d3vw/nft-ui/dev/install.sh | sudo bash -s -- --beta
 ```
 
 ### Manual Install

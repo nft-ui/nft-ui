@@ -40,6 +40,15 @@ jobs:
           # Linux arm64
           GOOS=linux GOARCH=arm64 go build -o nft-ui-linux-arm64 .
 
+      - name: Check if prerelease
+        id: check_prerelease
+        run: |
+          if [[ "${{ github.ref_name }}" =~ -alpha\.|beta\.|rc\. ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -47,3 +56,4 @@ jobs:
             nft-ui-linux-amd64
             nft-ui-linux-arm64
           generate_release_notes: true
+          prerelease: ${{ steps.check_prerelease.outputs.is_prerelease }}
