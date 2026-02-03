@@ -25,7 +25,7 @@ CapabilityBoundingSet=CAP_NET_ADMIN
 
 # Configuration via environment variables
 # Uncomment and modify as needed:
-#Environment=NFT_UI_LISTEN_ADDR=:8080
+Environment=NFT_UI_LISTEN_ADDR=localhost:8080
 #Environment=NFT_UI_AUTH_USER=admin
 #Environment=NFT_UI_AUTH_PASSWORD=changeme
 #Environment=NFT_UI_READ_ONLY=false
