@@ -25,25 +25,25 @@ A web-based UI for managing nftables outbound traffic quotas.
 
 **Stable (main branch):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/d3vw/nft-ui/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/nft-ui/nft-ui/main/install.sh | sudo bash
 ```
 
 **Beta (dev branch):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/d3vw/nft-ui/dev/install.sh | sudo bash -s -- --beta
+curl -fsSL https://raw.githubusercontent.com/nft-ui/nft-ui/dev/install.sh | sudo bash -s -- --beta
 ```
 
 ### Manual Install
 
-Download the binary from [Releases](https://github.com/d3vw/nft-ui/releases):
+Download the binary from [Releases](https://github.com/nft-ui/nft-ui/releases):
 
 **Stable (latest release):**
 ```bash
 # Linux amd64
-curl -fsSL -o nft-ui-stable https://github.com/d3vw/nft-ui/releases/latest/download/nft-ui-linux-amd64
+curl -fsSL -o nft-ui-stable https://github.com/nft-ui/nft-ui/releases/latest/download/nft-ui-linux-amd64
 
 # Linux arm64
-curl -fsSL -o nft-ui-stable https://github.com/d3vw/nft-ui/releases/latest/download/nft-ui-linux-arm64
+curl -fsSL -o nft-ui-stable https://github.com/nft-ui/nft-ui/releases/latest/download/nft-ui-linux-arm64
 
 chmod +x nft-ui-stable
 sudo mv nft-ui-stable /usr/local/bin/nft-ui
@@ -52,13 +52,13 @@ sudo mv nft-ui-stable /usr/local/bin/nft-ui
 **Beta/Alpha (pre-release):**
 ```bash
 # Get latest pre-release tag
-TAG=$(curl -s https://api.github.com/repos/d3vw/nft-ui/releases | jq -r '[.[] | select(.prerelease==true)][0].tag_name')
+TAG=$(curl -s https://api.github.com/repos/nft-ui/nft-ui/releases | jq -r '[.[] | select(.prerelease==true)][0].tag_name')
 
 # Linux amd64
-curl -fsSL -o nft-ui-beta https://github.com/d3vw/nft-ui/releases/download/${TAG}/nft-ui-linux-amd64
+curl -fsSL -o nft-ui-beta https://github.com/nft-ui/nft-ui/releases/download/${TAG}/nft-ui-linux-amd64
 
 # Linux arm64
-curl -fsSL -o nft-ui-beta https://github.com/d3vw/nft-ui/releases/download/${TAG}/nft-ui-linux-arm64
+curl -fsSL -o nft-ui-beta https://github.com/nft-ui/nft-ui/releases/download/${TAG}/nft-ui-linux-arm64
 
 chmod +x nft-ui-beta
 sudo mv nft-ui-beta /usr/local/bin/nft-ui
