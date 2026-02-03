@@ -37,15 +37,31 @@ curl -fsSL https://raw.githubusercontent.com/d3vw/nft-ui/dev/install.sh | sudo b
 
 Download the binary from [Releases](https://github.com/d3vw/nft-ui/releases):
 
+**Stable (latest release):**
 ```bash
 # Linux amd64
-curl -fsSL -o nft-ui https://github.com/d3vw/nft-ui/releases/latest/download/nft-ui-linux-amd64
+curl -fsSL -o nft-ui-stable https://github.com/d3vw/nft-ui/releases/latest/download/nft-ui-linux-amd64
 
 # Linux arm64
-curl -fsSL -o nft-ui https://github.com/d3vw/nft-ui/releases/latest/download/nft-ui-linux-arm64
+curl -fsSL -o nft-ui-stable https://github.com/d3vw/nft-ui/releases/latest/download/nft-ui-linux-arm64
 
-chmod +x nft-ui
-sudo mv nft-ui /usr/local/bin/
+chmod +x nft-ui-stable
+sudo mv nft-ui-stable /usr/local/bin/nft-ui
+```
+
+**Beta/Alpha (pre-release):**
+```bash
+# Get latest pre-release tag
+TAG=$(curl -s https://api.github.com/repos/d3vw/nft-ui/releases | jq -r '[.[] | select(.prerelease==true)][0].tag_name')
+
+# Linux amd64
+curl -fsSL -o nft-ui-beta https://github.com/d3vw/nft-ui/releases/download/${TAG}/nft-ui-linux-amd64
+
+# Linux arm64
+curl -fsSL -o nft-ui-beta https://github.com/d3vw/nft-ui/releases/download/${TAG}/nft-ui-linux-arm64
+
+chmod +x nft-ui-beta
+sudo mv nft-ui-beta /usr/local/bin/nft-ui
 ```
 
 ## Usage
