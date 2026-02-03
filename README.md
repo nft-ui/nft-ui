@@ -58,11 +58,42 @@ sudo nft-ui
 sudo NFT_UI_LISTEN_ADDR=:3000 NFT_UI_AUTH_USER=admin NFT_UI_AUTH_PASSWORD=secret nft-ui
 ```
 
+## Remote Access via SSH Tunnel
+
+For security, the default configuration binds to `localhost:8080` (not exposed to public network). 
+
+To access the web interface from your local machine:
+
+```bash
+# Forward remote localhost:8080 to your local port 8080
+ssh -L 8080:localhost:8080 user@remote-server
+
+# Or use a different local port (e.g., 9090)
+ssh -L 9090:localhost:8080 user@remote-server
+
+# Keep the tunnel alive with connection monitoring
+ssh -L 8080:localhost:8080 -o ServerAliveInterval=60 user@remote-server
+```
+
+Then open your browser: `http://localhost:8080` (or `http://localhost:9090`)
+
+**Tip:** Add the SSH tunnel to your `~/.ssh/config`:
+
+```
+Host nft-ui-tunnel
+    HostName remote-server
+    User your-username
+    LocalForward 8080 localhost:8080
+    ServerAliveInterval 60
+```
+
+Then simply run: `ssh nft-ui-tunnel`
+
 ## Configuration
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `NFT_UI_LISTEN_ADDR` | `:8080` | Server listen address |
+| `NFT_UI_LISTEN_ADDR` | `localhost:8080` | Server listen address |
 | `NFT_UI_AUTH_USER` | - | Basic auth username |
 | `NFT_UI_AUTH_PASSWORD` | - | Basic auth password |
 | `NFT_UI_READ_ONLY` | `false` | Disable write operations |
@@ -83,7 +114,7 @@ After=network.target nftables.service
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/nft-ui
-Environment=NFT_UI_LISTEN_ADDR=:8080
+Environment=NFT_UI_LISTEN_ADDR=localhost:8080
 Restart=on-failure
 RestartSec=5
 AmbientCapabilities=CAP_NET_ADMIN
