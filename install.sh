@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="d3vw/nft-ui"
+REPO="nft-ui/nft-ui"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="nft-ui"
 BETA_MODE=false
@@ -41,10 +41,18 @@ esac
 
 info "Detected architecture: $ARCH"
 
+# Check for jq (needed for beta mode)
+if [ "$BETA_MODE" = true ] && ! command -v jq &> /dev/null; then
+    error "jq is required for beta mode. Install it with: apt install jq"
+fi
+
 # Get latest release
 if [ "$BETA_MODE" = true ]; then
     info "Fetching latest beta/pre-release..."
-    LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" | grep '"tag_name"' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+    LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" | jq -r '[.[] | select(.prerelease==true)][0].tag_name')
+    if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+        error "No pre-release found. Try without --beta flag for stable version."
+    fi
 else
     info "Fetching latest stable release..."
     LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
