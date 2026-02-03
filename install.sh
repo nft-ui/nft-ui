@@ -5,13 +5,23 @@ REPO="nft-ui/nft-ui"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="nft-ui"
 BETA_MODE=false
+SPECIFIC_TAG=""
 
 # Parse arguments
-for arg in "$@"; do
-    case $arg in
+while [[ $# -gt 0 ]]; do
+    case $1 in
         --beta)
             BETA_MODE=true
             shift
+            ;;
+        --tag|--version)
+            SPECIFIC_TAG="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--beta] [--tag <version>]"
+            exit 1
             ;;
     esac
 done
@@ -46,8 +56,17 @@ if [ "$BETA_MODE" = true ] && ! command -v jq &> /dev/null; then
     error "jq is required for beta mode. Install it with: apt install jq"
 fi
 
-# Get latest release
-if [ "$BETA_MODE" = true ]; then
+# Get release version
+if [ -n "$SPECIFIC_TAG" ]; then
+    # Use specified tag
+    LATEST="$SPECIFIC_TAG"
+    info "Using specified version: $LATEST"
+    
+    # Verify tag exists
+    if ! curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${LATEST}" | grep -q '"tag_name"'; then
+        error "Tag '${LATEST}' not found in repository"
+    fi
+elif [ "$BETA_MODE" = true ]; then
     info "Fetching latest beta/pre-release..."
     LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" | jq -r '[.[] | select(.prerelease==true)][0].tag_name')
     if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
