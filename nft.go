@@ -655,3 +655,16 @@ func (n *NFTManager) DeleteAllowedPort(handle int64) error {
 	_, err = n.execNFT("delete", "rule", n.tableFamily, n.tableName, "input", "handle", strconv.FormatInt(handle, 10))
 	return err
 }
+
+// GetRawRuleset returns the raw output of 'nft list ruleset'
+func (n *NFTManager) GetRawRuleset() (string, error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	output, err := n.execNFT("list", "ruleset")
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), nil
+}

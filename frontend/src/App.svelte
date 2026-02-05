@@ -14,6 +14,7 @@
   import QuotaList from './lib/QuotaList.svelte';
   import PortList from './lib/PortList.svelte';
   import ForwardingList from './lib/ForwardingList.svelte';
+  import RawRuleset from './lib/RawRuleset.svelte';
   import Toast from './lib/Toast.svelte';
   import PublicQuery from './lib/PublicQuery.svelte';
 
@@ -97,6 +98,7 @@
       <QuotaList />
       <PortList />
       <ForwardingList />
+      <RawRuleset />
     </main>
 
     <!-- Toast notifications -->

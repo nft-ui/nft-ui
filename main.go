@@ -90,6 +90,9 @@ func main() {
 	api.POST("/forwarding/:id/enable", handler.EnableForwarding)
 	api.POST("/forwarding/:id/disable", handler.DisableForwarding)
 
+	// Raw ruleset endpoint
+	api.GET("/raw-ruleset", handler.GetRawRuleset)
+
 	// Serve frontend
 	setupFrontend(e)
 
