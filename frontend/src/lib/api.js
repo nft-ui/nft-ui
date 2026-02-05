@@ -117,3 +117,7 @@ export async function disableForwardingRule(id) {
     method: 'POST',
   });
 }
+
+export async function fetchRawRuleset() {
+  return request('/raw-ruleset');
+}

@@ -507,3 +507,20 @@ func (h *Handler) DisableForwarding(c echo.Context) error {
 		Message: "Forwarding rule disabled successfully",
 	})
 }
+
+// GetRawRuleset handles GET /api/v1/raw-ruleset
+func (h *Handler) GetRawRuleset(c echo.Context) error {
+	rawData, err := h.nft.GetRawRuleset()
+	if err != nil {
+		h.logger.Printf("Error getting raw ruleset: %v", err)
+		return c.JSON(http.StatusInternalServerError, APIResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data":    rawData,
+	})
+}
