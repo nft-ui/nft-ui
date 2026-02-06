@@ -115,6 +115,20 @@ services:
     restart: unless-stopped
 ```
 
+### Podman
+
+```bash
+# build image
+podman build -t nft-ui .
+
+# run (host rules)
+podman run -d --name nft-ui \
+  --network host \
+  --cap-add NET_ADMIN --cap-add NET_RAW \
+  -e NFT_UI_LISTEN_ADDR=127.0.0.1:8080 \
+  nft-ui
+```
+
 ## Remote Access via SSH Tunnel
 
 For security, the default configuration binds to `localhost:8080` (not exposed to public network). 
