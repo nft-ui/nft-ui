@@ -79,6 +79,27 @@ sudo nft-ui
 sudo NFT_UI_LISTEN_ADDR=:3000 NFT_UI_AUTH_USER=admin NFT_UI_AUTH_PASSWORD=secret nft-ui
 ```
 
+## Run in Docker (manage host nftables)
+
+nftables depends on the **host kernel**. To let a container manage **host** rules, run it in the **host network namespace** and grant net-admin capabilities.
+
+```bash
+# build image
+docker build -t nft-ui .
+
+# run (host rules)
+docker run -d --name nft-ui \
+  --network host \
+  --cap-add NET_ADMIN --cap-add NET_RAW \
+  -e NFT_UI_LISTEN_ADDR=127.0.0.1:8080 \
+  nft-ui
+```
+
+Notes:
+- Requires **rootful** Docker/Podman (rootless cannot add NET_ADMIN).
+- If you bind to `127.0.0.1`, use SSH tunnel as below for remote access.
+- `--privileged` also works, but is broader than needed.
+
 ## Remote Access via SSH Tunnel
 
 For security, the default configuration binds to `localhost:8080` (not exposed to public network). 
