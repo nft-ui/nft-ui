@@ -100,6 +100,21 @@ Notes:
 - If you bind to `127.0.0.1`, use SSH tunnel as below for remote access.
 - `--privileged` also works, but is broader than needed.
 
+### docker-compose
+
+```yaml
+services:
+  nft-ui:
+    build: .
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      NFT_UI_LISTEN_ADDR: 127.0.0.1:8080
+    restart: unless-stopped
+```
+
 ## Remote Access via SSH Tunnel
 
 For security, the default configuration binds to `localhost:8080` (not exposed to public network). 
