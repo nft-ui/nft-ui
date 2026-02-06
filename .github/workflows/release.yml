@@ -43,7 +43,7 @@ jobs:
       - name: Check if prerelease
         id: check_prerelease
         run: |
-          if [[ "${{ github.ref_name }}" =~ -alpha\.|beta\.|rc\. ]]; then
+          if [[ "${{ github.ref_name }}" =~ -alpha|-beta|-rc ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT

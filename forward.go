@@ -91,7 +91,7 @@ func (m *ForwardingManager) EnsureNatSetup() error {
 	if err != nil {
 		// Create prerouting chain
 		if _, err := m.execNFT("add", "chain", "ip", "nat", "prerouting",
-			"{ type nat hook prerouting priority dstnat ; policy accept ; }"); err != nil {
+			"{ type nat hook prerouting priority -100 ; policy accept ; }"); err != nil {
 			return fmt.Errorf("failed to create prerouting chain: %w", err)
 		}
 	}
@@ -101,7 +101,7 @@ func (m *ForwardingManager) EnsureNatSetup() error {
 	if err != nil {
 		// Create postrouting chain
 		if _, err := m.execNFT("add", "chain", "ip", "nat", "postrouting",
-			"{ type nat hook postrouting priority srcnat ; policy accept ; }"); err != nil {
+			"{ type nat hook postrouting priority 100 ; policy accept ; }"); err != nil {
 			return fmt.Errorf("failed to create postrouting chain: %w", err)
 		}
 	}
@@ -111,7 +111,7 @@ func (m *ForwardingManager) EnsureNatSetup() error {
 	if err != nil {
 		// Create output chain
 		if _, err := m.execNFT("add", "chain", "ip", "nat", "output",
-			"{ type nat hook output priority dstnat ; policy accept ; }"); err != nil {
+			"{ type nat hook output priority -100 ; policy accept ; }"); err != nil {
 			return fmt.Errorf("failed to create output chain: %w", err)
 		}
 	}

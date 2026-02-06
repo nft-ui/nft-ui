@@ -142,6 +142,7 @@ func BasicAuthMiddleware(cfg *Config) echo.MiddlewareFunc {
 			// Extract credentials
 			username, password, ok := c.Request().BasicAuth()
 			if !ok {
+				c.Response().Header().Set("WWW-Authenticate", `Basic realm="nft-ui"`)
 				return echo.NewHTTPError(http.StatusUnauthorized, "Missing or invalid Authorization header")
 			}
 
@@ -160,6 +161,7 @@ func BasicAuthMiddleware(cfg *Config) echo.MiddlewareFunc {
 			remaining := globalAuthTracker.GetRemainingAttempts(ip)
 
 			if remaining > 0 {
+				c.Response().Header().Set("WWW-Authenticate", `Basic realm="nft-ui"`)
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid credentials")
 			} else {
 				return c.JSON(http.StatusTooManyRequests, APIResponse{

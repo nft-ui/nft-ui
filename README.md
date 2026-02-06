@@ -33,6 +33,11 @@ curl -fsSL https://raw.githubusercontent.com/nft-ui/nft-ui/main/install.sh | sud
 curl -fsSL https://raw.githubusercontent.com/nft-ui/nft-ui/dev/install.sh | sudo bash -s -- --beta
 ```
 
+**Specific version:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/nft-ui/nft-ui/main/install.sh | sudo bash -s -- --tag v0.4.5
+```
+
 ### Manual Install
 
 Download the binary from [Releases](https://github.com/nft-ui/nft-ui/releases):
