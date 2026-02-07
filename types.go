@@ -134,23 +134,26 @@ type ForwardingRule struct {
 	Comment    string `json:"comment"`     // User-provided description
 	PreHandle  int64  `json:"pre_handle"`  // nft handle for prerouting DNAT rule
 	PostHandle int64  `json:"post_handle"` // nft handle for postrouting MASQUERADE rule
+	LimitMbps  int    `json:"limit_mbps"`  // Bandwidth limit in Mbps (0 = no limit)
 }
 
 // AddForwardingRequest is the request body for adding a new forwarding rule
 type AddForwardingRequest struct {
-	SrcPort  int    `json:"src_port"`
-	DstIP    string `json:"dst_ip"`
-	DstPort  int    `json:"dst_port"`
-	Protocol string `json:"protocol"`
-	Comment  string `json:"comment"`
+	SrcPort   int    `json:"src_port"`
+	DstIP     string `json:"dst_ip"`
+	DstPort   int    `json:"dst_port"`
+	Protocol  string `json:"protocol"`
+	Comment   string `json:"comment"`
+	LimitMbps int    `json:"limit_mbps"`
 }
 
 // EditForwardingRequest is the request body for editing a forwarding rule
 type EditForwardingRequest struct {
-	DstIP    string `json:"dst_ip"`
-	DstPort  int    `json:"dst_port"`
-	Protocol string `json:"protocol"`
-	Comment  string `json:"comment"`
+	DstIP     string `json:"dst_ip"`
+	DstPort   int    `json:"dst_port"`
+	Protocol  string `json:"protocol"`
+	Comment   string `json:"comment"`
+	LimitMbps int    `json:"limit_mbps"`
 }
 
 // ForwardingResponse is the API response for listing forwarding rules

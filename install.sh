@@ -1,9 +1,30 @@
 #!/bin/bash
 set -e
 
-REPO="d3vw/nft-ui"
+REPO="nft-ui/nft-ui"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="nft-ui"
+BETA_MODE=false
+SPECIFIC_TAG=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --beta)
+            BETA_MODE=true
+            shift
+            ;;
+        --tag|--version)
+            SPECIFIC_TAG="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--beta] [--tag <version>]"
+            exit 1
+            ;;
+    esac
+done
 
 # Colors
 RED='\033[0;31m'
@@ -30,9 +51,31 @@ esac
 
 info "Detected architecture: $ARCH"
 
-# Get latest release
-info "Fetching latest release..."
-LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+# Check for jq (needed for beta mode)
+if [ "$BETA_MODE" = true ] && ! command -v jq &> /dev/null; then
+    error "jq is required for beta mode. Install it with: apt install jq"
+fi
+
+# Get release version
+if [ -n "$SPECIFIC_TAG" ]; then
+    # Use specified tag
+    LATEST="$SPECIFIC_TAG"
+    info "Using specified version: $LATEST"
+    
+    # Verify tag exists
+    if ! curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${LATEST}" | grep -q '"tag_name"'; then
+        error "Tag '${LATEST}' not found in repository"
+    fi
+elif [ "$BETA_MODE" = true ]; then
+    info "Fetching latest beta/pre-release..."
+    LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" | jq -r '[.[] | select(.prerelease==true)][0].tag_name')
+    if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+        error "No pre-release found. Try without --beta flag for stable version."
+    fi
+else
+    info "Fetching latest stable release..."
+    LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+fi
 
 if [ -z "$LATEST" ]; then
     error "Failed to get latest release"
