@@ -96,6 +96,9 @@ chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 
 # Verify
 if command -v $BINARY_NAME &> /dev/null; then
+    # Create data directory for ruleset persistence
+    mkdir -p /var/lib/nft-ui
+
     info "Installation successful!"
     echo ""
     echo "Usage:"

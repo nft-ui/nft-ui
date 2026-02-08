@@ -21,6 +21,7 @@ type Config struct {
 	TokenSalt            string `yaml:"token_salt"`
 	PublicQueryEnabled   bool   `yaml:"public_query_enabled"`
 	DisabledForwardsPath string `yaml:"disabled_forwards_path"`
+	RulesetPath          string `yaml:"ruleset_path"`
 }
 
 // DefaultConfig returns the default configuration
@@ -38,6 +39,7 @@ func DefaultConfig() *Config {
 		TokenSalt:            "",
 		PublicQueryEnabled:   false,
 		DisabledForwardsPath: "/var/lib/nft-ui/disabled-forwards.json",
+		RulesetPath:          "/var/lib/nft-ui/ruleset.nft",
 	}
 }
 
@@ -100,6 +102,9 @@ func LoadConfig() (*Config, error) {
 	}
 	if v := os.Getenv("NFT_UI_DISABLED_FORWARDS_PATH"); v != "" {
 		cfg.DisabledForwardsPath = v
+	}
+	if v := os.Getenv("NFT_UI_RULESET_PATH"); v != "" {
+		cfg.RulesetPath = v
 	}
 
 	return cfg, nil

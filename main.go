@@ -28,6 +28,13 @@ func main() {
 	// Initialize NFT manager
 	nftMgr := NewNFTManager(cfg)
 
+	// Restore saved ruleset (if any)
+	if err := nftMgr.RestoreRuleset(); err != nil {
+		logger.Printf("Warning: failed to restore ruleset: %v", err)
+	} else {
+		logger.Printf("Ruleset restored from %s", cfg.RulesetPath)
+	}
+
 	// Initialize forwarding manager
 	fwdMgr := NewForwardingManager(cfg)
 

@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,6 +25,7 @@ type NFTManager struct {
 	tableFamily string
 	tableName   string
 	chainName   string
+	rulesetPath string
 }
 
 // NewNFTManager creates a new NFTManager
@@ -32,6 +35,7 @@ func NewNFTManager(cfg *Config) *NFTManager {
 		tableFamily: cfg.TableFamily,
 		tableName:   cfg.TableName,
 		chainName:   cfg.ChainName,
+		rulesetPath: cfg.RulesetPath,
 	}
 }
 
@@ -667,4 +671,48 @@ func (n *NFTManager) GetRawRuleset() (string, error) {
 	}
 
 	return string(output), nil
+}
+
+// SaveRuleset dumps the current nftables ruleset to the configured file path
+func (n *NFTManager) SaveRuleset() error {
+	output, err := n.execNFT("list", "ruleset")
+	if err != nil {
+		return fmt.Errorf("failed to list ruleset: %w", err)
+	}
+
+	// Create parent directories if needed
+	dir := filepath.Dir(n.rulesetPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", dir, err)
+	}
+
+	// Write atomically: write to .tmp then rename
+	tmpPath := n.rulesetPath + ".tmp"
+	if err := os.WriteFile(tmpPath, output, 0644); err != nil {
+		return fmt.Errorf("failed to write ruleset file: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, n.rulesetPath); err != nil {
+		return fmt.Errorf("failed to rename ruleset file: %w", err)
+	}
+
+	return nil
+}
+
+// RestoreRuleset restores the nftables ruleset from the configured file path
+func (n *NFTManager) RestoreRuleset() error {
+	if _, err := os.Stat(n.rulesetPath); os.IsNotExist(err) {
+		return nil // File doesn't exist yet, skip silently
+	}
+
+	// Flush existing ruleset before restoring
+	if _, err := n.execNFT("flush", "ruleset"); err != nil {
+		return fmt.Errorf("failed to flush ruleset: %w", err)
+	}
+
+	if _, err := n.execNFT("-f", n.rulesetPath); err != nil {
+		return fmt.Errorf("failed to restore ruleset from %s: %w", n.rulesetPath, err)
+	}
+
+	return nil
 }
