@@ -77,7 +77,7 @@
 </script>
 
 <div
-  class="border-b border-surface-300 last:border-b-0 transition-colors hover:bg-surface-50"
+  class="table-row"
   class:selected={isSelected}
 >
   <button
@@ -88,46 +88,46 @@
     <div>
       <input
         type="checkbox"
-        class="w-[18px] h-[18px] cursor-pointer"
+        class="w-[18px] h-[18px] cursor-pointer accent-[var(--primary)]"
         checked={isSelected}
         onclick={handleCheckbox}
       />
     </div>
     <div class="flex items-center gap-2">
       <span
-        class="w-2.5 h-2.5 rounded-full flex-shrink-0"
-        class:bg-success-500={hasInbound}
-        class:bg-warning-500={!hasInbound}
+        class="status-dot"
+        class:status-dot-active={hasInbound}
+        class:status-dot-warning={!hasInbound}
         title={hasInbound ? 'Inbound allowed' : 'No inbound rule'}
       ></span>
-      <span class="font-semibold text-base">{quota.port}</span>
+      <span class="font-semibold text-base" style="color: var(--text);">{quota.port}</span>
     </div>
     <div class="hidden md:flex items-center gap-1 text-sm">
-      <span class="font-semibold">{formatBytes(quota.used_bytes)}</span>
-      <span class="text-surface-600">/</span>
-      <span class="text-surface-600">{formatBytes(quota.quota_bytes)}</span>
+      <span class="font-semibold" style="color: var(--text);">{formatBytes(quota.used_bytes)}</span>
+      <span style="color: var(--text-muted);">/</span>
+      <span style="color: var(--text-muted);">{formatBytes(quota.quota_bytes)}</span>
     </div>
     <div class="flex items-center justify-center">
       <div class="relative flex items-center gap-2">
-        <svg class="w-11 h-11 -rotate-90" viewBox="0 0 36 36">
-          <circle class="fill-none stroke-surface-200 stroke-[3]" cx="18" cy="18" r="15.5" />
+        <svg class="w-11 h-11 -rotate-90 progress-ring-glow" viewBox="0 0 36 36">
+          <circle class="fill-none stroke-[3]" style="stroke: var(--border);" cx="18" cy="18" r="15.5" />
           <circle
-            class="fill-none stroke-[3] stroke-round transition-all duration-300"
+            class="fill-none stroke-[3] transition-all duration-300"
+            style="stroke: {progressColor}; stroke-dasharray: {ringPercent}, 100; stroke-linecap: round;"
             cx="18"
             cy="18"
             r="15.5"
-            style="stroke: {progressColor}; stroke-dasharray: {ringPercent}, 100;"
           />
         </svg>
-        <span class="text-xs font-semibold min-w-[40px]">{formatPercent(quota.usage_percent)}</span>
+        <span class="text-xs font-semibold min-w-[40px]" style="color: var(--text);">{formatPercent(quota.usage_percent)}</span>
       </div>
     </div>
     <div class="hidden md:flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full" style="background-color: {statusColor};"></span>
-      <span class="text-sm capitalize">{quota.status}</span>
+      <span class="w-2 h-2 rounded-full" style="background-color: {statusColor}; box-shadow: 0 0 6px {statusColor};"></span>
+      <span class="text-sm capitalize" style="color: var(--text);">{quota.status}</span>
     </div>
     <div>
-      <span class="text-xl text-surface-600 text-center w-full block">{expanded ? '−' : '+'}</span>
+      <span class="text-xl text-center w-full block" style="color: var(--text-muted);">{expanded ? '−' : '+'}</span>
     </div>
   </button>
 
@@ -135,21 +135,24 @@
     <div class="px-4 md:pl-14 pb-4 animate-[slideDown_0.2s_ease]">
       {#if quota.comment}
         <div class="flex gap-2 mb-2 text-sm">
-          <span class="text-surface-600">Comment:</span>
-          <span>{quota.comment}</span>
+          <span style="color: var(--text-muted);">Comment:</span>
+          <span style="color: var(--text);">{quota.comment}</span>
         </div>
       {/if}
       <div class="flex gap-2 mb-2 text-sm">
-        <span class="text-surface-600">ID:</span>
-        <span class="font-mono text-xs bg-surface-50 px-1.5 py-0.5 rounded">{quota.id}</span>
+        <span style="color: var(--text-muted);">ID:</span>
+        <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--bg); color: var(--text); border: 1px solid var(--border);">{quota.id}</span>
       </div>
       {#if quota.token}
         <div class="flex gap-2 mb-2 text-sm">
-          <span class="text-surface-600">Query Token:</span>
-          <span class="inline-flex items-center gap-2 font-mono text-xs bg-surface-50 px-1.5 py-0.5 rounded">
+          <span style="color: var(--text-muted);">Query Token:</span>
+          <span class="inline-flex items-center gap-2 font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--bg); color: var(--text); border: 1px solid var(--border);">
             {quota.token}
             <button
-              class="px-2 py-0.5 text-[11px] bg-surface-100 border border-surface-300 rounded cursor-pointer text-surface-600 hover:bg-surface-200 hover:text-surface-900 transition-all"
+              class="px-2 py-0.5 text-[11px] rounded cursor-pointer transition-all"
+              style="background-color: var(--surface-hover); border: 1px solid var(--border); color: var(--text-muted);"
+              onmouseover={(e) => e.currentTarget.style.backgroundColor = 'var(--border)'}
+              onmouseout={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
               onclick={copyToken}
               title="Copy token"
             >
@@ -158,13 +161,16 @@
           </span>
         </div>
         <div class="flex gap-2 mb-2 text-sm">
-          <span class="text-surface-600">Query URL:</span>
-          <span class="inline-flex items-center gap-2 font-mono text-xs bg-surface-50 px-1.5 py-0.5 rounded">
-            <a href={queryUrl} target="_blank" class="text-primary-500 no-underline hover:underline">
+          <span style="color: var(--text-muted);">Query URL:</span>
+          <span class="inline-flex items-center gap-2 font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--bg); color: var(--text); border: 1px solid var(--border);">
+            <a href={queryUrl} target="_blank" class="no-underline hover:underline" style="color: var(--primary);">
               /query?token={quota.token}
             </a>
             <button
-              class="px-2 py-0.5 text-[11px] bg-surface-100 border border-surface-300 rounded cursor-pointer text-surface-600 hover:bg-surface-200 hover:text-surface-900 transition-all"
+              class="px-2 py-0.5 text-[11px] rounded cursor-pointer transition-all"
+              style="background-color: var(--surface-hover); border: 1px solid var(--border); color: var(--text-muted);"
+              onmouseover={(e) => e.currentTarget.style.backgroundColor = 'var(--border)'}
+              onmouseout={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
               onclick={copyQueryUrl}
               title="Copy URL"
             >
@@ -177,21 +183,21 @@
       {#if !$readOnly}
         <div class="flex gap-2 mt-4">
           <button
-            class="btn btn-sm variant-soft"
+            class="btn btn-sm btn-secondary"
             onclick={() => (showResetConfirm = true)}
             disabled={processing}
           >
             Reset
           </button>
           <button
-            class="btn btn-sm variant-soft"
+            class="btn btn-sm btn-secondary"
             onclick={() => (showEditModal = true)}
             disabled={processing}
           >
             Edit
           </button>
           <button
-            class="btn btn-sm variant-filled-error"
+            class="btn btn-sm btn-danger"
             onclick={() => (showDeleteConfirm = true)}
             disabled={processing}
           >
@@ -233,7 +239,7 @@
 
 <style>
   .selected {
-    background-color: rgba(74, 158, 255, 0.1);
+    background-color: rgba(59, 130, 246, 0.1);
   }
 
   @keyframes slideDown {

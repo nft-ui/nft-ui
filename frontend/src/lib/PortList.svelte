@@ -36,31 +36,34 @@
 
 <section class="mt-8">
   <div class="flex justify-between items-center mb-4">
-    <h2 class="text-lg font-semibold m-0">Allowed Inbound Ports</h2>
+    <h2 class="text-lg font-semibold m-0" style="color: var(--text);">Allowed Inbound Ports</h2>
     {#if !$readOnly}
-      <button class="btn btn-sm variant-filled-primary" onclick={handleAddClick}>
+      <button class="btn btn-sm btn-primary" onclick={handleAddClick}>
         + Add Port
       </button>
     {/if}
   </div>
 
   {#if $allowedPorts.length === 0}
-    <p class="text-surface-600 text-center py-5">No allowed port rules found</p>
+    <p class="text-center py-5" style="color: var(--text-muted);">No allowed port rules found</p>
   {:else}
     <div class="flex flex-wrap gap-2">
       {#each sortedPorts as port}
         <div
-          class="flex items-center gap-2 card p-2 px-3 relative"
-          class:border-primary-500={port.managed}
-          class:border={port.managed}
+          class="badge flex items-center gap-2 relative transition-all"
+          class:badge-primary={port.managed}
+          style="padding: 0.5rem 0.75rem;"
         >
-          <span class="font-mono font-semibold text-primary-500">{port.port}</span>
+          <span class="font-mono font-semibold" style="color: {port.managed ? 'var(--primary)' : 'var(--text)'};">{port.port}</span>
           {#if port.comment}
-            <span class="text-xs text-surface-600">{port.comment}</span>
+            <span class="text-xs" style="color: var(--text-muted);">{port.comment}</span>
           {/if}
           {#if port.managed && !$readOnly}
             <button
-              class="bg-transparent border-none text-error-500 text-lg p-0 px-1 cursor-pointer opacity-60 hover:opacity-100 leading-none ml-1"
+              class="bg-transparent border-none text-lg p-0 px-1 cursor-pointer leading-none ml-1 transition-opacity"
+              style="color: var(--danger); opacity: 0.6;"
+              onmouseover={(e) => e.currentTarget.style.opacity = '1'}
+              onmouseout={(e) => e.currentTarget.style.opacity = '0.6'}
               onclick={() => handleDeleteClick(port)}
               title="Delete port"
             >

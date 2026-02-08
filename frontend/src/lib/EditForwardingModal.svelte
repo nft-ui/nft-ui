@@ -70,20 +70,23 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div
-  class="fixed inset-0 bg-black/70 flex items-center justify-center z-[1000]"
+  class="modal-backdrop"
   onclick={onclose}
   role="presentation"
 >
   <div
-    class="card p-6 w-full max-w-[420px] max-h-[90vh] overflow-y-auto bg-surface-100"
+    class="modal w-full max-w-[420px] max-h-[90vh] overflow-y-auto"
     onclick={(e) => e.stopPropagation()}
     role="dialog"
     aria-modal="true"
   >
     <div class="flex justify-between items-center mb-5">
-      <h3 class="text-lg font-semibold">Edit Forwarding Rule</h3>
+      <h3 class="text-lg font-semibold" style="color: var(--text);">Edit Forwarding Rule</h3>
       <button
-        class="bg-transparent border-none text-2xl cursor-pointer text-surface-600 hover:text-surface-900 p-0 leading-none"
+        class="bg-transparent border-none text-2xl cursor-pointer p-0 leading-none transition-colors"
+        style="color: var(--text-muted);"
+        onmouseover={(e) => e.currentTarget.style.color = 'var(--text)'}
+        onmouseout={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
         onclick={onclose}
       >
         &times;
@@ -92,15 +95,15 @@
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
       <div class="mb-4">
-        <label for="srcPortDisplay" class="label mb-2">
+        <label for="srcPortDisplay" class="label">
           <span>Source Port</span>
         </label>
         <input type="text" id="srcPortDisplay" class="input" value={rule.src_port} disabled />
-        <span class="text-surface-600 text-xs mt-1 block">Source port cannot be changed</span>
+        <span class="text-xs mt-1 block" style="color: var(--text-muted);">Source port cannot be changed</span>
       </div>
 
       <div class="mb-4">
-        <label for="dstIP" class="label mb-2">
+        <label for="dstIP" class="label">
           <span>Destination IP</span>
         </label>
         <input
@@ -112,12 +115,12 @@
           placeholder="e.g. 192.168.1.100"
         />
         {#if errors.dstIP}
-          <span class="text-error-500 text-xs mt-1 block">{errors.dstIP}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.dstIP}</span>
         {/if}
       </div>
 
       <div class="mb-4">
-        <label for="dstPort" class="label mb-2">
+        <label for="dstPort" class="label">
           <span>Destination Port</span>
         </label>
         <input
@@ -131,12 +134,12 @@
           max="65535"
         />
         {#if errors.dstPort}
-          <span class="text-error-500 text-xs mt-1 block">{errors.dstPort}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.dstPort}</span>
         {/if}
       </div>
 
       <div class="mb-4">
-        <label for="protocol" class="label mb-2">
+        <label for="protocol" class="label">
           <span>Protocol</span>
         </label>
         <select id="protocol" class="select" bind:value={protocol}>
@@ -147,7 +150,7 @@
       </div>
 
       <div class="mb-4">
-        <label for="comment" class="label mb-2">
+        <label for="comment" class="label">
           <span>Comment (optional)</span>
         </label>
         <input
@@ -161,7 +164,7 @@
       </div>
 
       <div class="mb-4">
-        <label for="limitMbps" class="label mb-2">
+        <label for="limitMbps" class="label">
           <span>Bandwidth Limit (Mbps)</span>
         </label>
         <input
@@ -174,20 +177,20 @@
           min="0"
         />
         {#if errors.limitMbps}
-          <span class="text-error-500 text-xs mt-1 block">{errors.limitMbps}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.limitMbps}</span>
         {/if}
-        <span class="text-surface-600 text-xs mt-1 block">0 = no limit, or set max Mbps (e.g. 10, 100)</span>
+        <span class="text-xs mt-1 block" style="color: var(--text-muted);">0 = no limit, or set max Mbps (e.g. 10, 100)</span>
       </div>
 
-      <div class="text-sm text-surface-600 bg-surface-50 p-3 rounded-lg mt-4">
+      <div class="text-sm p-3 rounded-lg mt-4" style="background-color: var(--surface-hover); color: var(--text-muted); border: 1px solid var(--border);">
         Note: Editing will briefly disable and re-enable the rule.
       </div>
 
       <div class="flex justify-end gap-3 mt-6">
-        <button type="button" class="btn variant-soft" onclick={onclose}>
+        <button type="button" class="btn btn-secondary" onclick={onclose}>
           Cancel
         </button>
-        <button type="submit" class="btn variant-filled-primary" disabled={submitting}>
+        <button type="submit" class="btn btn-primary" disabled={submitting}>
           {submitting ? 'Saving...' : 'Save Changes'}
         </button>
       </div>

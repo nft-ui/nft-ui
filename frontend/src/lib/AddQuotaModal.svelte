@@ -65,21 +65,21 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div
-  class="fixed inset-0 bg-black/70 flex items-center justify-center z-[1000]"
+  class="modal-backdrop"
   onclick={handleCancel}
   role="presentation"
 >
   <div
-    class="card p-6 min-w-[400px] max-w-[90%] bg-surface-100"
+    class="modal"
     onclick={(e) => e.stopPropagation()}
     role="dialog"
     aria-modal="true"
   >
-    <h2 class="text-xl font-semibold mb-5">Add Quota Rule</h2>
+    <h2 class="text-xl font-semibold mb-5" style="color: var(--text);">Add Quota Rule</h2>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
       <div class="mb-4">
-        <label for="port" class="label mb-2">
+        <label for="port" class="label">
           <span>Port</span>
         </label>
         <input
@@ -93,12 +93,12 @@
           max="65535"
         />
         {#if errors.port}
-          <span class="text-error-500 text-xs mt-1 block">{errors.port}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.port}</span>
         {/if}
       </div>
 
       <div class="mb-4">
-        <label for="quota" class="label mb-2">
+        <label for="quota" class="label">
           <span>Quota Limit</span>
         </label>
         <div class="flex gap-3">
@@ -119,12 +119,12 @@
           </select>
         </div>
         {#if errors.quota}
-          <span class="text-error-500 text-xs mt-1 block">{errors.quota}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.quota}</span>
         {/if}
       </div>
 
       <div class="mb-6">
-        <label for="comment" class="label mb-2">
+        <label for="comment" class="label">
           <span>Comment (optional)</span>
         </label>
         <input
@@ -137,10 +137,10 @@
       </div>
 
       <div class="flex justify-end gap-3">
-        <button type="button" class="btn variant-soft" onclick={handleCancel}>
+        <button type="button" class="btn btn-secondary" onclick={handleCancel}>
           Cancel
         </button>
-        <button type="submit" class="btn variant-filled-primary" disabled={submitting}>
+        <button type="submit" class="btn btn-primary" disabled={submitting}>
           {submitting ? 'Adding...' : 'Add Rule'}
         </button>
       </div>

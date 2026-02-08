@@ -49,14 +49,14 @@
   }
 
   let ringPercent = $derived(result ? Math.min(result.usage_percent, 100) : 0);
-  let progressColor = $derived(result ? getProgressColor(result.usage_percent) : 'var(--color-ok)');
-  let statusColor = $derived(result ? getStatusColor(result.status) : 'var(--color-ok)');
+  let progressColor = $derived(result ? getProgressColor(result.usage_percent) : 'var(--primary)');
+  let statusColor = $derived(result ? getStatusColor(result.status) : 'var(--primary)');
 </script>
 
-<div class="min-h-screen flex items-center justify-center p-5 bg-surface-50">
+<div class="min-h-screen flex items-center justify-center p-5" style="background-color: var(--bg);">
   <div class="max-w-[480px] w-full text-center">
-    <h1 class="text-[28px] font-semibold mb-2">Port Usage Query</h1>
-    <p class="text-surface-600 mb-8">Enter your token to check current bandwidth usage</p>
+    <h1 class="text-[28px] font-semibold mb-2" style="color: var(--text);">Port Usage Query</h1>
+    <p class="mb-8" style="color: var(--text-muted);">Enter your token to check current bandwidth usage</p>
 
     <form onsubmit={handleSubmit}>
       <div class="flex flex-col sm:flex-row gap-3 mb-6">
@@ -69,23 +69,23 @@
           autocomplete="off"
           spellcheck="false"
         />
-        <button type="submit" class="btn variant-filled-primary px-6 whitespace-nowrap" disabled={loading}>
+        <button type="submit" class="btn btn-primary px-6 whitespace-nowrap" disabled={loading}>
           {loading ? 'Checking...' : 'Check Usage'}
         </button>
       </div>
     </form>
 
     {#if error}
-      <div class="alert variant-filled-error mb-6">{error}</div>
+      <div class="alert alert-error mb-6">{error}</div>
     {/if}
 
     {#if result}
-      <div class="card p-6 text-left bg-surface-100">
+      <div class="card p-6 text-left">
         <div class="flex justify-between items-center mb-6">
-          <span class="text-2xl font-semibold">Port {result.port}</span>
+          <span class="text-2xl font-semibold" style="color: var(--text);">Port {result.port}</span>
           <span
-            class="badge variant-filled px-4 py-1.5 text-sm font-medium capitalize text-white"
-            style="background-color: {statusColor}"
+            class="badge px-4 py-1.5 text-sm font-medium capitalize"
+            style="background-color: {statusColor}; color: white; border-color: {statusColor};"
           >
             {result.status}
           </span>
@@ -93,34 +93,34 @@
 
         <div class="flex flex-col sm:flex-row gap-6 items-center">
           <div class="relative w-[120px] h-[120px] flex-shrink-0">
-            <svg class="w-full h-full -rotate-90" viewBox="0 0 120 120">
-              <circle class="fill-none stroke-surface-200 stroke-[8]" cx="60" cy="60" r="52" />
+            <svg class="w-full h-full -rotate-90 progress-ring-glow" viewBox="0 0 120 120">
+              <circle class="fill-none stroke-[8]" style="stroke: var(--border);" cx="60" cy="60" r="52" />
               <circle
-                class="fill-none stroke-[8] stroke-round transition-all duration-500"
+                class="fill-none stroke-[8] transition-all duration-500"
+                style="stroke: {progressColor}; stroke-dasharray: {ringPercent * 3.27}, 327; stroke-linecap: round;"
                 cx="60"
                 cy="60"
                 r="52"
-                style="stroke: {progressColor}; stroke-dasharray: {ringPercent * 3.27}, 327;"
               />
             </svg>
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <span class="text-xl font-semibold">{formatPercent(result.usage_percent)}</span>
+              <span class="text-xl font-semibold" style="color: var(--text);">{formatPercent(result.usage_percent)}</span>
             </div>
           </div>
 
           <div class="flex-1 w-full">
-            <div class="flex justify-between py-2 border-b border-surface-300">
-              <span class="text-surface-600">Used:</span>
-              <span class="font-medium">{formatBytes(result.used_bytes)}</span>
+            <div class="flex justify-between py-2" style="border-bottom: 1px solid var(--border);">
+              <span style="color: var(--text-muted);">Used:</span>
+              <span class="font-medium" style="color: var(--text);">{formatBytes(result.used_bytes)}</span>
             </div>
-            <div class="flex justify-between py-2 border-b border-surface-300">
-              <span class="text-surface-600">Quota:</span>
-              <span class="font-medium">{formatBytes(result.quota_bytes)}</span>
+            <div class="flex justify-between py-2" style="border-bottom: 1px solid var(--border);">
+              <span style="color: var(--text-muted);">Quota:</span>
+              <span class="font-medium" style="color: var(--text);">{formatBytes(result.quota_bytes)}</span>
             </div>
             {#if result.comment}
               <div class="flex justify-between py-2">
-                <span class="text-surface-600">Comment:</span>
-                <span class="font-medium">{result.comment}</span>
+                <span style="color: var(--text-muted);">Comment:</span>
+                <span class="font-medium" style="color: var(--text);">{result.comment}</span>
               </div>
             {/if}
           </div>

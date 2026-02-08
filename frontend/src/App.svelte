@@ -32,13 +32,18 @@
   let refreshTimer = $state(null);
   let currentRoute = $state(getInitialRoute());
 
-  // Theme management
-  const THEMES = ['modern', 'wintry', 'rocket', 'seafoam', 'crimson'];
-  let currentTheme = $state('modern');
+  // Premium theme management
+  const THEMES = [
+    { id: 'midnight', name: 'Midnight' },
+    { id: 'obsidian', name: 'Obsidian' },
+    { id: 'nord', name: 'Nord' },
+    { id: 'sunset', name: 'Sunset' }
+  ];
+  let currentTheme = $state('midnight');
 
   onMount(() => {
     // Load theme from localStorage
-    const savedTheme = localStorage.getItem('theme') || 'modern';
+    const savedTheme = localStorage.getItem('theme') || 'midnight';
     currentTheme = savedTheme;
     applyTheme(savedTheme);
 
@@ -94,26 +99,32 @@
 {#if currentRoute === 'query'}
   <PublicQuery />
 {:else}
-  <div class="min-h-screen bg-surface-50">
-    <header class="bg-surface-100 border-b border-surface-300">
+  <div class="min-h-screen" style="background-color: var(--bg);">
+    <!-- Header with subtle border and frosted glass effect -->
+    <header style="background-color: var(--surface); border-bottom: 1px solid var(--border); backdrop-filter: blur(8px);">
       <div class="container mx-auto px-5 py-4">
         <div class="flex justify-between items-center">
-          <h1 class="text-2xl font-semibold">nft-ui</h1>
+          <h1 class="text-2xl font-semibold" style="color: var(--text);">
+            <span style="color: var(--primary);">nft</span>-ui
+          </h1>
           <div class="flex items-center gap-3">
+            <!-- Premium theme switcher -->
             <select
-              class="select text-sm px-3 py-2"
+              class="select"
               bind:value={currentTheme}
               onchange={handleThemeChange}
             >
               {#each THEMES as theme}
-                <option value={theme}>{theme.charAt(0).toUpperCase() + theme.slice(1)}</option>
+                <option value={theme.id}>{theme.name}</option>
               {/each}
             </select>
+            
             {#if $readOnly}
-              <span class="badge variant-filled-warning text-xs px-3 py-1">Read Only</span>
+              <span class="badge badge-warning">Read Only</span>
             {/if}
+            
             <button
-              class="btn variant-soft text-sm"
+              class="btn btn-secondary"
               onclick={handleRefresh}
               disabled={$loading}
             >
@@ -126,13 +137,11 @@
 
     <main class="container mx-auto px-5 py-6">
       {#if $error}
-        <div class="alert variant-filled-error mb-5">
-          <div class="alert-message">
-            <span>Error: {$error}</span>
+        <div class="alert alert-error mb-5">
+          <div>
+            <strong>Error:</strong> {$error}
           </div>
-          <div class="alert-actions">
-            <button class="btn btn-sm variant-filled" onclick={handleRefresh}>Retry</button>
-          </div>
+          <button class="btn btn-sm btn-danger" onclick={handleRefresh}>Retry</button>
         </div>
       {/if}
 

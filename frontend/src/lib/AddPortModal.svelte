@@ -51,21 +51,21 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div
-  class="fixed inset-0 bg-black/70 flex items-center justify-center z-[1000]"
+  class="modal-backdrop"
   onclick={handleCancel}
   role="presentation"
 >
   <div
-    class="card p-6 min-w-[400px] max-w-[90%] bg-surface-100"
+    class="modal"
     onclick={(e) => e.stopPropagation()}
     role="dialog"
     aria-modal="true"
   >
-    <h2 class="text-xl font-semibold mb-5">Add Allowed Port</h2>
+    <h2 class="text-xl font-semibold mb-5" style="color: var(--text);">Add Allowed Port</h2>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
       <div class="mb-6">
-        <label for="port" class="label mb-2">
+        <label for="port" class="label">
           <span>Port Number</span>
         </label>
         <input
@@ -80,18 +80,18 @@
           autofocus
         />
         {#if error}
-          <span class="text-error-500 text-xs mt-1 block">{error}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{error}</span>
         {/if}
-        <span class="text-surface-600 text-xs mt-2 block">
+        <span class="text-xs mt-2 block" style="color: var(--text-muted);">
           This will add a TCP inbound rule: tcp dport &lt;port&gt; accept
         </span>
       </div>
 
       <div class="flex justify-end gap-3">
-        <button type="button" class="btn variant-soft" onclick={handleCancel}>
+        <button type="button" class="btn btn-secondary" onclick={handleCancel}>
           Cancel
         </button>
-        <button type="submit" class="btn variant-filled-primary" disabled={submitting}>
+        <button type="submit" class="btn btn-primary" disabled={submitting}>
           {submitting ? 'Adding...' : 'Add Port'}
         </button>
       </div>

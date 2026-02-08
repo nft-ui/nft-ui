@@ -38,18 +38,18 @@
   }
 </script>
 
-<div class="card mb-6 overflow-hidden bg-surface-100">
+<div class="card mb-6 overflow-hidden">
   <!-- Toolbar -->
-  <div class="flex justify-between items-center p-4 border-b border-surface-300">
+  <div class="flex justify-between items-center p-4" style="border-bottom: 1px solid var(--border);">
     <div class="flex items-center gap-3">
       {#if $hasSelection}
-        <span class="text-surface-600 text-sm">{$selectedCount} selected</span>
-        <button class="btn btn-sm variant-soft" onclick={clearSelection}>
+        <span style="color: var(--text-muted); font-size: 0.875rem;">{$selectedCount} selected</span>
+        <button class="btn btn-sm btn-secondary" onclick={clearSelection}>
           Clear Selection
         </button>
         {#if !$readOnly}
           <button
-            class="btn btn-sm variant-filled-error"
+            class="btn btn-sm btn-danger"
             onclick={() => (showBatchResetConfirm = true)}
             disabled={batchResetting}
           >
@@ -57,14 +57,14 @@
           </button>
         {/if}
       {:else}
-        <button class="btn btn-sm variant-soft" onclick={selectAll}>
+        <button class="btn btn-sm btn-secondary" onclick={selectAll}>
           Select All
         </button>
       {/if}
     </div>
     <div class="flex items-center gap-3">
       {#if !$readOnly}
-        <button class="btn btn-sm variant-filled-primary" onclick={() => (showAddModal = true)}>
+        <button class="btn btn-sm btn-primary" onclick={() => (showAddModal = true)}>
           + Add Rule
         </button>
       {/if}
@@ -72,7 +72,7 @@
   </div>
 
   <!-- Table header -->
-  <div class="hidden md:grid grid-cols-[40px_100px_180px_120px_100px_50px] px-4 py-3 bg-surface-50 text-xs font-semibold text-surface-600 uppercase tracking-wider">
+  <div class="table-header hidden md:grid grid-cols-[40px_100px_180px_120px_100px_50px]">
     <div></div>
     <div>Port</div>
     <div>Usage</div>
@@ -83,9 +83,9 @@
 
   <!-- Quota items -->
   {#if $loading && $sortedQuotas.length === 0}
-    <div class="py-10 text-center text-surface-600">Loading...</div>
+    <div class="py-10 text-center" style="color: var(--text-muted);">Loading...</div>
   {:else if $sortedQuotas.length === 0}
-    <div class="py-10 text-center text-surface-600">No quota rules found</div>
+    <div class="py-10 text-center" style="color: var(--text-muted);">No quota rules found</div>
   {:else}
     {#each $sortedQuotas as quota (quota.id)}
       <QuotaItem {quota} />

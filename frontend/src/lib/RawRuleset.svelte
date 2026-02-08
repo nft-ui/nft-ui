@@ -28,10 +28,10 @@
   }
 </script>
 
-<section class="card p-5 mb-6 bg-surface-100">
+<section class="card p-5 mb-6">
   <div class="flex justify-between items-center mb-4">
-    <h2 class="text-lg font-semibold m-0">Raw Ruleset Data</h2>
-    <button class="btn btn-sm variant-soft" onclick={toggleExpanded}>
+    <h2 class="text-lg font-semibold m-0" style="color: var(--text);">Raw Ruleset Data</h2>
+    <button class="btn btn-sm btn-secondary" onclick={toggleExpanded}>
       {expanded ? 'Hide' : 'Show'}
     </button>
   </div>
@@ -39,16 +39,16 @@
   {#if expanded}
     <div class="mt-4">
       {#if loading}
-        <div class="text-center text-surface-600 py-5">Loading raw ruleset...</div>
+        <div class="text-center py-5" style="color: var(--text-muted);">Loading raw ruleset...</div>
       {:else if error}
-        <div class="alert variant-filled-error flex justify-between items-center">
+        <div class="alert alert-error flex justify-between items-center">
           <span>Error: {error}</span>
-          <button class="btn btn-sm variant-soft" onclick={loadRawData}>Retry</button>
+          <button class="btn btn-sm btn-danger" onclick={loadRawData}>Retry</button>
         </div>
       {:else if rawData}
-        <pre class="bg-surface-50 border border-surface-300 rounded-lg p-4 overflow-x-auto font-mono text-sm leading-relaxed m-0 whitespace-pre-wrap break-words">{rawData}</pre>
+        <pre class="code-block m-0 whitespace-pre-wrap break-words">{rawData}</pre>
       {:else}
-        <div class="text-center text-surface-600 py-5">No data loaded</div>
+        <div class="text-center py-5" style="color: var(--text-muted);">No data loaded</div>
       {/if}
     </div>
   {/if}
