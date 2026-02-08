@@ -34,29 +34,33 @@
   }
 </script>
 
-<section class="port-list">
-  <div class="port-header">
-    <h2>Allowed Inbound Ports</h2>
+<section class="mt-8">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-lg font-semibold m-0">Allowed Inbound Ports</h2>
     {#if !$readOnly}
-      <button class="btn-primary btn-sm" onclick={handleAddClick}>
+      <button class="btn btn-sm variant-filled-primary" onclick={handleAddClick}>
         + Add Port
       </button>
     {/if}
   </div>
 
   {#if $allowedPorts.length === 0}
-    <p class="empty-state">No allowed port rules found</p>
+    <p class="text-surface-600 text-center py-5">No allowed port rules found</p>
   {:else}
-    <div class="port-grid">
+    <div class="flex flex-wrap gap-2">
       {#each sortedPorts as port}
-        <div class="port-item" class:managed={port.managed}>
-          <span class="port-number">{port.port}</span>
+        <div
+          class="flex items-center gap-2 card p-2 px-3 relative"
+          class:border-primary-500={port.managed}
+          class:border={port.managed}
+        >
+          <span class="font-mono font-semibold text-primary-500">{port.port}</span>
           {#if port.comment}
-            <span class="port-comment">{port.comment}</span>
+            <span class="text-xs text-surface-600">{port.comment}</span>
           {/if}
           {#if port.managed && !$readOnly}
             <button
-              class="delete-btn"
+              class="bg-transparent border-none text-error-500 text-lg p-0 px-1 cursor-pointer opacity-60 hover:opacity-100 leading-none ml-1"
               onclick={() => handleDeleteClick(port)}
               title="Delete port"
             >
@@ -83,82 +87,3 @@
     oncancel={cancelDelete}
   />
 {/if}
-
-<style>
-  .port-list {
-    margin-top: 32px;
-  }
-
-  .port-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-
-  h2 {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-    color: var(--color-text);
-  }
-
-  .btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-  }
-
-  .empty-state {
-    color: var(--color-text-muted);
-    text-align: center;
-    padding: 20px;
-  }
-
-  .port-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .port-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    padding: 8px 12px;
-    position: relative;
-  }
-
-  .port-item.managed {
-    border-color: var(--color-primary);
-  }
-
-  .port-number {
-    font-family: monospace;
-    font-weight: 600;
-    color: var(--color-primary);
-  }
-
-  .port-comment {
-    font-size: 12px;
-    color: var(--color-text-muted);
-  }
-
-  .delete-btn {
-    background: transparent;
-    border: none;
-    color: var(--color-danger);
-    font-size: 18px;
-    padding: 0 4px;
-    cursor: pointer;
-    opacity: 0.6;
-    line-height: 1;
-    margin-left: 4px;
-  }
-
-  .delete-btn:hover {
-    opacity: 1;
-  }
-</style>

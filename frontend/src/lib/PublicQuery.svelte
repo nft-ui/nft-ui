@@ -53,70 +53,74 @@
   let statusColor = $derived(result ? getStatusColor(result.status) : 'var(--color-ok)');
 </script>
 
-<div class="query-page">
-  <div class="query-container">
-    <h1>Port Usage Query</h1>
-    <p class="subtitle">Enter your token to check current bandwidth usage</p>
+<div class="min-h-screen flex items-center justify-center p-5 bg-surface-50">
+  <div class="max-w-[480px] w-full text-center">
+    <h1 class="text-[28px] font-semibold mb-2">Port Usage Query</h1>
+    <p class="text-surface-600 mb-8">Enter your token to check current bandwidth usage</p>
 
     <form onsubmit={handleSubmit}>
-      <div class="input-group">
+      <div class="flex flex-col sm:flex-row gap-3 mb-6">
         <input
           type="text"
+          class="input flex-1 text-lg font-mono tracking-[2px] uppercase text-center"
           bind:value={token}
           placeholder="Enter 8-character token"
           maxlength="8"
-          class="token-input"
           autocomplete="off"
           spellcheck="false"
         />
-        <button type="submit" class="btn-primary" disabled={loading}>
+        <button type="submit" class="btn variant-filled-primary px-6 whitespace-nowrap" disabled={loading}>
           {loading ? 'Checking...' : 'Check Usage'}
         </button>
       </div>
     </form>
 
     {#if error}
-      <div class="error-message">{error}</div>
+      <div class="alert variant-filled-error mb-6">{error}</div>
     {/if}
 
     {#if result}
-      <div class="result-card">
-        <div class="result-header">
-          <span class="port-label">Port {result.port}</span>
-          <span class="status-badge" style="background-color: {statusColor}">
+      <div class="card p-6 text-left bg-surface-100">
+        <div class="flex justify-between items-center mb-6">
+          <span class="text-2xl font-semibold">Port {result.port}</span>
+          <span
+            class="badge variant-filled px-4 py-1.5 text-sm font-medium capitalize text-white"
+            style="background-color: {statusColor}"
+          >
             {result.status}
           </span>
         </div>
 
-        <div class="usage-display">
-          <div class="ring-container">
-            <svg class="progress-ring" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="52" />
+        <div class="flex flex-col sm:flex-row gap-6 items-center">
+          <div class="relative w-[120px] h-[120px] flex-shrink-0">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 120 120">
+              <circle class="fill-none stroke-surface-200 stroke-[8]" cx="60" cy="60" r="52" />
               <circle
-                class="ring-progress"
-                cx="60" cy="60" r="52"
-                stroke={progressColor}
-                stroke-dasharray="{ringPercent * 3.27}, 327"
+                class="fill-none stroke-[8] stroke-round transition-all duration-500"
+                cx="60"
+                cy="60"
+                r="52"
+                style="stroke: {progressColor}; stroke-dasharray: {ringPercent * 3.27}, 327;"
               />
             </svg>
-            <div class="ring-text">
-              <span class="percent">{formatPercent(result.usage_percent)}</span>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+              <span class="text-xl font-semibold">{formatPercent(result.usage_percent)}</span>
             </div>
           </div>
 
-          <div class="usage-details">
-            <div class="usage-row">
-              <span class="label">Used:</span>
-              <span class="value">{formatBytes(result.used_bytes)}</span>
+          <div class="flex-1 w-full">
+            <div class="flex justify-between py-2 border-b border-surface-300">
+              <span class="text-surface-600">Used:</span>
+              <span class="font-medium">{formatBytes(result.used_bytes)}</span>
             </div>
-            <div class="usage-row">
-              <span class="label">Quota:</span>
-              <span class="value">{formatBytes(result.quota_bytes)}</span>
+            <div class="flex justify-between py-2 border-b border-surface-300">
+              <span class="text-surface-600">Quota:</span>
+              <span class="font-medium">{formatBytes(result.quota_bytes)}</span>
             </div>
             {#if result.comment}
-              <div class="usage-row">
-                <span class="label">Comment:</span>
-                <span class="value">{result.comment}</span>
+              <div class="flex justify-between py-2">
+                <span class="text-surface-600">Comment:</span>
+                <span class="font-medium">{result.comment}</span>
               </div>
             {/if}
           </div>
@@ -127,201 +131,9 @@
 </div>
 
 <style>
-  .query-page {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background-color: var(--color-bg);
-  }
-
-  .query-container {
-    max-width: 480px;
-    width: 100%;
-    text-align: center;
-  }
-
-  h1 {
-    font-size: 28px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--color-text);
-  }
-
-  .subtitle {
-    color: var(--color-text-muted);
-    margin-bottom: 32px;
-  }
-
-  .input-group {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-  }
-
-  .token-input {
-    flex: 1;
-    padding: 12px 16px;
-    font-size: 18px;
-    font-family: monospace;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    border: 2px solid var(--color-border);
-    border-radius: 8px;
-    background-color: var(--color-surface);
-    color: var(--color-text);
-    text-align: center;
-  }
-
-  .token-input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-  }
-
-  .token-input::placeholder {
+  .input::placeholder {
     text-transform: none;
     letter-spacing: normal;
     font-size: 14px;
-  }
-
-  .btn-primary {
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: 500;
-    background-color: var(--color-primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    white-space: nowrap;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-primary-hover);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .error-message {
-    background-color: rgba(248, 113, 113, 0.2);
-    border: 1px solid var(--color-danger);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 24px;
-    color: var(--color-danger);
-  }
-
-  .result-card {
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    padding: 24px;
-    text-align: left;
-  }
-
-  .result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-  }
-
-  .port-label {
-    font-size: 24px;
-    font-weight: 600;
-  }
-
-  .status-badge {
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    color: white;
-    text-transform: capitalize;
-  }
-
-  .usage-display {
-    display: flex;
-    gap: 24px;
-    align-items: center;
-  }
-
-  .ring-container {
-    position: relative;
-    width: 120px;
-    height: 120px;
-    flex-shrink: 0;
-  }
-
-  .progress-ring {
-    transform: rotate(-90deg);
-  }
-
-  .ring-bg {
-    fill: none;
-    stroke: var(--color-bg);
-    stroke-width: 8;
-  }
-
-  .ring-progress {
-    fill: none;
-    stroke-width: 8;
-    stroke-linecap: round;
-    transition: stroke-dasharray 0.5s ease;
-  }
-
-  .ring-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-  }
-
-  .ring-text .percent {
-    font-size: 20px;
-    font-weight: 600;
-  }
-
-  .usage-details {
-    flex: 1;
-  }
-
-  .usage-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .usage-row:last-child {
-    border-bottom: none;
-  }
-
-  .usage-row .label {
-    color: var(--color-text-muted);
-  }
-
-  .usage-row .value {
-    font-weight: 500;
-  }
-
-  @media (max-width: 480px) {
-    .input-group {
-      flex-direction: column;
-    }
-
-    .usage-display {
-      flex-direction: column;
-    }
-
-    .ring-container {
-      margin: 0 auto;
-    }
   }
 </style>

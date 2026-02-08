@@ -32,7 +32,16 @@
   let refreshTimer = $state(null);
   let currentRoute = $state(getInitialRoute());
 
+  // Theme management
+  const THEMES = ['modern', 'wintry', 'rocket', 'seafoam', 'crimson'];
+  let currentTheme = $state('modern');
+
   onMount(() => {
+    // Load theme from localStorage
+    const savedTheme = localStorage.getItem('theme') || 'modern';
+    currentTheme = savedTheme;
+    applyTheme(savedTheme);
+
     // Only load data for admin route
     if (currentRoute === 'admin') {
       loadQuotas();
@@ -42,6 +51,19 @@
 
     return () => stopAutoRefresh();
   });
+
+  function applyTheme(theme) {
+    if (typeof document !== 'undefined') {
+      document.body.dataset.theme = theme;
+    }
+  }
+
+  function handleThemeChange(event) {
+    const newTheme = event.target.value;
+    currentTheme = newTheme;
+    applyTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  }
 
   function startAutoRefresh() {
     stopAutoRefresh();
@@ -72,26 +94,45 @@
 {#if currentRoute === 'query'}
   <PublicQuery />
 {:else}
-  <div class="app">
-    <header>
-      <div class="container header-content">
-        <h1>nft-ui</h1>
-        <div class="header-right">
-          {#if $readOnly}
-            <span class="badge badge-warning">Read Only</span>
-          {/if}
-          <button class="btn-secondary" onclick={handleRefresh} disabled={$loading}>
-            {$loading ? 'Refreshing...' : 'Refresh'}
-          </button>
+  <div class="min-h-screen bg-surface-50">
+    <header class="bg-surface-100 border-b border-surface-300">
+      <div class="container mx-auto px-5 py-4">
+        <div class="flex justify-between items-center">
+          <h1 class="text-2xl font-semibold">nft-ui</h1>
+          <div class="flex items-center gap-3">
+            <select
+              class="select text-sm px-3 py-2"
+              bind:value={currentTheme}
+              onchange={handleThemeChange}
+            >
+              {#each THEMES as theme}
+                <option value={theme}>{theme.charAt(0).toUpperCase() + theme.slice(1)}</option>
+              {/each}
+            </select>
+            {#if $readOnly}
+              <span class="badge variant-filled-warning text-xs px-3 py-1">Read Only</span>
+            {/if}
+            <button
+              class="btn variant-soft text-sm"
+              onclick={handleRefresh}
+              disabled={$loading}
+            >
+              {$loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
         </div>
       </div>
     </header>
 
-    <main class="container">
+    <main class="container mx-auto px-5 py-6">
       {#if $error}
-        <div class="error-banner">
-          <span>Error: {$error}</span>
-          <button onclick={handleRefresh}>Retry</button>
+        <div class="alert variant-filled-error mb-5">
+          <div class="alert-message">
+            <span>Error: {$error}</span>
+          </div>
+          <div class="alert-actions">
+            <button class="btn btn-sm variant-filled" onclick={handleRefresh}>Retry</button>
+          </div>
         </div>
       {/if}
 
@@ -102,7 +143,7 @@
     </main>
 
     <!-- Toast notifications -->
-    <div class="toast-container">
+    <div class="fixed bottom-5 right-5 flex flex-col gap-2 z-[2000]">
       {#each $notifications as notification (notification.id)}
         <Toast
           message={notification.message}
@@ -113,77 +154,3 @@
     </div>
   </div>
 {/if}
-
-<style>
-  .app {
-    min-height: 100vh;
-  }
-
-  header {
-    background-color: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    padding: 16px 0;
-  }
-
-  .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .badge {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  .badge-warning {
-    background-color: var(--color-warning);
-    color: #000;
-  }
-
-  main {
-    padding-top: 24px;
-    padding-bottom: 24px;
-  }
-
-  .error-banner {
-    background-color: rgba(248, 113, 113, 0.2);
-    border: 1px solid var(--color-danger);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .error-banner button {
-    background-color: var(--color-danger);
-    color: white;
-    padding: 6px 12px;
-  }
-
-  .toast-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 2000;
-  }
-</style>

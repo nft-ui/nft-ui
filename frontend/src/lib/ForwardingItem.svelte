@@ -40,80 +40,88 @@
   }
 </script>
 
-<div class="forwarding-item" class:expanded class:disabled={!rule.enabled} class:unmanaged={!rule.managed}>
-  <button class="item-row" onclick={() => expanded = !expanded} type="button">
-    <div class="col-status">
+<div
+  class="border-b border-surface-300 last:border-b-0 transition-colors hover:bg-surface-50"
+  class:opacity-60={!rule.enabled}
+  class:opacity-85={!rule.managed}
+>
+  <button
+    class="grid md:grid-cols-[80px_120px_1fr_100px_120px] grid-cols-[40px_1fr_60px] gap-2 md:gap-0 p-3 md:px-4 items-center cursor-pointer w-full bg-transparent border-none text-inherit text-left"
+    onclick={() => expanded = !expanded}
+    type="button"
+  >
+    <div class="flex items-center justify-center">
       <span
-        class="status-indicator"
-        class:enabled={rule.enabled}
-        class:unmanaged={!rule.managed}
+        class="w-3 h-3 rounded-full bg-surface-600 transition-colors"
+        class:bg-success-500={rule.enabled && rule.managed}
+        class:bg-warning-500={!rule.managed}
         title={!rule.managed ? 'Unmanaged (external)' : rule.enabled ? 'Enabled' : 'Disabled'}
       ></span>
     </div>
-    <div class="col-source">
-      <span class="port">{rule.src_port}</span>
+    <div class="flex items-center gap-1.5">
+      <span class="font-semibold text-base font-mono">{rule.src_port}</span>
       {#if !rule.managed}
-        <span class="unmanaged-badge" title="Not managed by nft-ui">ext</span>
+        <span class="text-[10px] bg-warning-500 text-black px-1 py-0 rounded font-medium uppercase">ext</span>
       {/if}
     </div>
-    <div class="col-dest">
-      <span class="dest-ip">{rule.dst_ip}</span>
-      <span class="dest-sep">:</span>
-      <span class="dest-port">{rule.dst_port}</span>
+    <div class="hidden md:flex items-center gap-0.5 font-mono">
+      <span class="text-primary-500">{rule.dst_ip}</span>
+      <span class="text-surface-600">:</span>
+      <span class="font-semibold">{rule.dst_port}</span>
     </div>
-    <div class="col-protocol">
-      <span class="protocol-badge">{formatProtocol(rule.protocol)}</span>
+    <div class="hidden md:flex items-center">
+      <span class="badge variant-soft text-xs px-2 py-0.5">{formatProtocol(rule.protocol)}</span>
     </div>
-    <div class="col-actions">
-      <span class="expand-icon">{expanded ? '−' : '+'}</span>
+    <div class="text-center">
+      <span class="text-xl text-surface-600">{expanded ? '−' : '+'}</span>
     </div>
   </button>
 
   {#if expanded}
-    <div class="item-details">
+    <div class="px-4 md:pl-24 pb-4 animate-[slideDown_0.2s_ease]">
       {#if rule.comment}
-        <div class="detail-row">
-          <span class="label">Comment:</span>
-          <span class="value">{rule.comment}</span>
+        <div class="flex gap-2 mb-2 text-sm">
+          <span class="text-surface-600">Comment:</span>
+          <span>{rule.comment}</span>
         </div>
       {/if}
-      <div class="detail-row">
-        <span class="label">ID:</span>
-        <span class="value code">{rule.id}</span>
+      <div class="flex gap-2 mb-2 text-sm">
+        <span class="text-surface-600">ID:</span>
+        <span class="font-mono text-xs bg-surface-50 px-1.5 py-0.5 rounded">{rule.id}</span>
       </div>
-      <div class="detail-row">
-        <span class="label">Status:</span>
-        <span class="value">{rule.enabled ? 'Enabled' : 'Disabled'}</span>
+      <div class="flex gap-2 mb-2 text-sm">
+        <span class="text-surface-600">Status:</span>
+        <span>{rule.enabled ? 'Enabled' : 'Disabled'}</span>
       </div>
-      <div class="detail-row">
-        <span class="label">Managed:</span>
-        <span class="value">{rule.managed ? 'Yes (nft-ui)' : 'No (external)'}</span>
+      <div class="flex gap-2 mb-2 text-sm">
+        <span class="text-surface-600">Managed:</span>
+        <span>{rule.managed ? 'Yes (nft-ui)' : 'No (external)'}</span>
       </div>
       {#if rule.limit_mbps > 0}
-        <div class="detail-row">
-          <span class="label">Bandwidth Limit:</span>
-          <span class="value">{rule.limit_mbps} Mbps</span>
+        <div class="flex gap-2 mb-2 text-sm">
+          <span class="text-surface-600">Bandwidth Limit:</span>
+          <span>{rule.limit_mbps} Mbps</span>
         </div>
       {/if}
 
       {#if !$readOnly && rule.managed}
-        <div class="actions">
+        <div class="flex gap-2 mt-4">
           <button
-            class="btn-secondary"
+            class="btn btn-sm variant-soft"
             onclick={handleToggleEnabled}
             disabled={processing}
           >
             {rule.enabled ? 'Disable' : 'Enable'}
           </button>
           <button
-            class="btn-secondary"
+            class="btn btn-sm variant-soft"
             onclick={() => showEditModal = true}
             disabled={processing}
           >
             Edit
           </button>
           <button
-            class="btn-danger"
+            class="btn btn-sm variant-filled-error"
             onclick={() => showDeleteConfirm = true}
             disabled={processing}
           >
@@ -122,20 +130,20 @@
         </div>
       {:else if !$readOnly && !rule.managed}
         {#if rule.enabled}
-          <div class="unmanaged-note">
+          <div class="text-sm text-surface-600 bg-surface-50 p-3 rounded-lg mt-3">
             This rule was created externally and cannot be modified through nft-ui.
           </div>
         {:else}
-          <div class="actions">
+          <div class="flex gap-2 mt-4">
             <button
-              class="btn-secondary"
+              class="btn btn-sm variant-soft"
               onclick={handleToggleEnabled}
               disabled={processing}
             >
               Enable
             </button>
             <button
-              class="btn-danger"
+              class="btn btn-sm variant-filled-error"
               onclick={() => showDeleteConfirm = true}
               disabled={processing}
             >
@@ -164,136 +172,6 @@
 {/if}
 
 <style>
-  .forwarding-item {
-    border-bottom: 1px solid var(--color-border);
-    transition: background-color 0.2s;
-  }
-
-  .forwarding-item:last-child {
-    border-bottom: none;
-  }
-
-  .forwarding-item:hover {
-    background-color: var(--color-surface-hover);
-  }
-
-  .forwarding-item.disabled {
-    opacity: 0.6;
-  }
-
-  .item-row {
-    display: grid;
-    grid-template-columns: 80px 120px 1fr 100px 120px;
-    padding: 12px 16px;
-    align-items: center;
-    cursor: pointer;
-    width: 100%;
-    background: transparent;
-    border: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-  }
-
-  .col-status {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .status-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: var(--color-text-muted);
-    transition: background-color 0.2s;
-  }
-
-  .status-indicator.enabled {
-    background-color: var(--color-success);
-  }
-
-  .status-indicator.unmanaged {
-    background-color: var(--color-warning);
-  }
-
-  .unmanaged-badge {
-    font-size: 10px;
-    background-color: var(--color-warning);
-    color: #000;
-    padding: 1px 4px;
-    border-radius: 3px;
-    margin-left: 6px;
-    font-weight: 500;
-    text-transform: uppercase;
-  }
-
-  .forwarding-item.unmanaged {
-    opacity: 0.85;
-  }
-
-  .unmanaged-note {
-    font-size: 13px;
-    color: var(--color-text-muted);
-    background-color: var(--color-bg);
-    padding: 10px 12px;
-    border-radius: 6px;
-    margin-top: 12px;
-  }
-
-  .col-source .port {
-    font-weight: 600;
-    font-size: 16px;
-    font-family: monospace;
-  }
-
-  .col-dest {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    font-family: monospace;
-  }
-
-  .dest-ip {
-    color: var(--color-primary);
-  }
-
-  .dest-sep {
-    color: var(--color-text-muted);
-  }
-
-  .dest-port {
-    font-weight: 600;
-  }
-
-  .col-protocol {
-    display: flex;
-    align-items: center;
-  }
-
-  .protocol-badge {
-    background-color: var(--color-bg);
-    border: 1px solid var(--color-border);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  .col-actions {
-    text-align: center;
-  }
-
-  .expand-icon {
-    font-size: 20px;
-    color: var(--color-text-muted);
-  }
-
-  .item-details {
-    padding: 0 16px 16px 96px;
-    animation: slideDown 0.2s ease;
-  }
-
   @keyframes slideDown {
     from {
       opacity: 0;
@@ -302,47 +180,6 @@
     to {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  .detail-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-    font-size: 14px;
-  }
-
-  .label {
-    color: var(--color-text-muted);
-  }
-
-  .code {
-    font-family: monospace;
-    font-size: 12px;
-    background-color: var(--color-bg);
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-
-  .actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-  }
-
-  @media (max-width: 768px) {
-    .item-row {
-      grid-template-columns: 40px 1fr 60px;
-      gap: 8px;
-    }
-
-    .col-protocol,
-    .col-dest {
-      display: none;
-    }
-
-    .item-details {
-      padding-left: 16px;
     }
   }
 </style>

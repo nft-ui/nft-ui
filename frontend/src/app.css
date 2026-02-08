@@ -1,18 +1,14 @@
-:root {
-  --color-bg: #1a1a2e;
-  --color-surface: #16213e;
-  --color-surface-hover: #1f2b4a;
-  --color-border: #2a3f5f;
-  --color-text: #eee;
-  --color-text-muted: #888;
-  --color-primary: #4a9eff;
-  --color-primary-hover: #3b8de8;
-  --color-success: #4ade80;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --color-ok: #22c55e;
-  --color-exceeded: #ef4444;
-}
+@import 'tailwindcss';
+
+/* Import Skeleton base styles */
+@import '@skeletonlabs/skeleton';
+
+/* Import Skeleton themes - copied locally due to import resolution issues */
+@import './themes/modern.css';
+@import './themes/wintry.css';
+@import './themes/rocket.css';
+@import './themes/seafoam.css';
+@import './themes/crimson.css';
 
 * {
   box-sizing: border-box;
@@ -21,128 +17,5 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background-color: var(--color-bg);
-  color: var(--color-text);
   line-height: 1.5;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #3b8de8;
-}
-
-.btn-danger {
-  background-color: var(--color-danger);
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background-color: #e05858;
-}
-
-.btn-secondary {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-surface-hover);
-}
-
-input, select {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  color: var(--color-text);
-  font-size: 14px;
-}
-
-input:focus, select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background-color: var(--color-surface);
-  border-radius: 12px;
-  padding: 24px;
-  min-width: 400px;
-  max-width: 90%;
-}
-
-.modal h2 {
-  margin: 0 0 20px 0;
-  font-size: 20px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: var(--color-text-muted);
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-}
-
-.form-row {
-  display: flex;
-  gap: 12px;
-}
-
-.form-row > * {
-  flex: 1;
 }

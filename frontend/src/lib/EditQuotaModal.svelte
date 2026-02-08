@@ -72,78 +72,71 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="modal-backdrop" onclick={handleCancel} role="presentation">
-  <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-    <h2>Edit Quota Rule</h2>
+<div
+  class="fixed inset-0 bg-black/70 flex items-center justify-center z-[1000]"
+  onclick={handleCancel}
+  role="presentation"
+>
+  <div
+    class="card p-6 min-w-[400px] max-w-[90%] bg-surface-100"
+    onclick={(e) => e.stopPropagation()}
+    role="dialog"
+    aria-modal="true"
+  >
+    <h2 class="text-xl font-semibold mb-5">Edit Quota Rule</h2>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <div class="form-group">
-        <label for="port-display">Port</label>
-        <input id="port-display" type="text" value={quota.port} disabled />
+      <div class="mb-4">
+        <label for="port-display" class="label mb-2">
+          <span>Port</span>
+        </label>
+        <input id="port-display" type="text" class="input" value={quota.port} disabled />
       </div>
 
-      <div class="form-group">
-        <label for="usage-display">Current Usage</label>
-        <input id="usage-display" type="text" value={formatBytes(quota.used_bytes)} disabled />
+      <div class="mb-4">
+        <label for="usage-display" class="label mb-2">
+          <span>Current Usage</span>
+        </label>
+        <input id="usage-display" type="text" class="input" value={formatBytes(quota.used_bytes)} disabled />
       </div>
 
-      <div class="form-group">
-        <label for="quota">New Quota Limit</label>
-        <div class="form-row">
+      <div class="mb-6">
+        <label for="quota" class="label mb-2">
+          <span>New Quota Limit</span>
+        </label>
+        <div class="flex gap-3">
           <input
             id="quota"
             type="number"
+            class="input flex-1"
+            class:input-error={error}
             bind:value={quotaValue}
             placeholder="100"
             min="1"
             step="any"
-            class:error={error}
           />
-          <select bind:value={quotaUnit}>
+          <select class="select" bind:value={quotaUnit}>
             <option value="MB">MB</option>
             <option value="GB">GB</option>
             <option value="TB">TB</option>
           </select>
         </div>
         {#if error}
-          <span class="error-text">{error}</span>
+          <span class="text-error-500 text-xs mt-1 block">{error}</span>
         {/if}
-        <span class="hint">Note: Modifying the quota will reset the used traffic to 0.</span>
+        <span class="text-warning-500 text-xs mt-2 block">
+          Note: Modifying the quota will reset the used traffic to 0.
+        </span>
       </div>
 
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" onclick={handleCancel}>
+      <div class="flex justify-end gap-3">
+        <button type="button" class="btn variant-soft" onclick={handleCancel}>
           Cancel
         </button>
-        <button type="submit" class="btn-primary" disabled={submitting}>
+        <button type="submit" class="btn variant-filled-primary" disabled={submitting}>
           {submitting ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
     </form>
   </div>
 </div>
-
-<style>
-  input:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-
-  input.error {
-    border-color: var(--color-danger);
-  }
-
-  .error-text {
-    display: block;
-    color: var(--color-danger);
-    font-size: 12px;
-    margin-top: 4px;
-  }
-
-  .hint {
-    display: block;
-    color: var(--color-warning);
-    font-size: 12px;
-    margin-top: 8px;
-  }
-</style>
