@@ -91,20 +91,17 @@
           </span>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-6 items-center">
-          <div class="relative w-[120px] h-[120px] flex-shrink-0">
-            <svg class="w-full h-full -rotate-90 progress-ring-glow" viewBox="0 0 120 120">
-              <circle class="fill-none stroke-[8]" style="stroke: var(--border);" cx="60" cy="60" r="52" />
-              <circle
-                class="fill-none stroke-[8] transition-all duration-500"
-                style="stroke: {progressColor}; stroke-dasharray: {ringPercent * 3.27}, 327; stroke-linecap: round;"
-                cx="60"
-                cy="60"
-                r="52"
-              />
-            </svg>
-            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <span class="text-xl font-semibold" style="color: var(--text);">{formatPercent(result.usage_percent)}</span>
+        <div class="flex flex-col gap-6">
+          <div class="w-full">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm" style="color: var(--text-muted);">Usage</span>
+              <span class="text-lg font-semibold" style="color: var(--text);">{formatPercent(result.usage_percent)}</span>
+            </div>
+            <div class="w-full h-3 rounded-full overflow-hidden" style="background-color: var(--border);">
+              <div
+                class="h-full rounded-full transition-all duration-500"
+                style="width: {ringPercent}%; background-color: {progressColor};"
+              ></div>
             </div>
           </div>
 

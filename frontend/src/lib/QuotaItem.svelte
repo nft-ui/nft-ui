@@ -107,20 +107,14 @@
       <span style="color: var(--text-muted);">/</span>
       <span style="color: var(--text-muted);">{formatBytes(quota.quota_bytes)}</span>
     </div>
-    <div class="flex items-center justify-center">
-      <div class="relative flex items-center gap-2">
-        <svg class="w-11 h-11 -rotate-90 progress-ring-glow" viewBox="0 0 36 36">
-          <circle class="fill-none stroke-[3]" style="stroke: var(--border);" cx="18" cy="18" r="15.5" />
-          <circle
-            class="fill-none stroke-[3] transition-all duration-300"
-            style="stroke: {progressColor}; stroke-dasharray: {ringPercent}, 100; stroke-linecap: round;"
-            cx="18"
-            cy="18"
-            r="15.5"
-          />
-        </svg>
-        <span class="text-xs font-semibold min-w-[40px]" style="color: var(--text);">{formatPercent(quota.usage_percent)}</span>
+    <div class="flex items-center gap-2">
+      <div class="flex-1 h-2 rounded-full overflow-hidden" style="background-color: var(--border); min-width: 60px;">
+        <div
+          class="h-full rounded-full transition-all duration-300"
+          style="width: {ringPercent}%; background-color: {progressColor};"
+        ></div>
       </div>
+      <span class="text-xs font-semibold min-w-[40px]" style="color: var(--text);">{formatPercent(quota.usage_percent)}</span>
     </div>
     <div class="hidden md:flex items-center gap-2">
       <span class="w-2 h-2 rounded-full" style="background-color: {statusColor}; box-shadow: 0 0 6px {statusColor};"></span>
