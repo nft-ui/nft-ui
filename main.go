@@ -38,6 +38,9 @@ func main() {
 	// Initialize forwarding manager
 	fwdMgr := NewForwardingManager(cfg)
 
+	// Wire up forwarding manager for forward chain quota support
+	nftMgr.SetForwardingManager(fwdMgr)
+
 	// Initialize token generator (may be nil if not configured)
 	var tokenGen *TokenGenerator
 	if cfg.TokenSalt != "" {
