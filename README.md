@@ -3,7 +3,7 @@
   
   # nft-ui
   
-  [![Release](https://github.com/nft-ui/nft-ui/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/nft-ui/nft-ui/actions/workflows/release.yml)
+  [![Release](https://github.com/nft-ui/nft-ui/actions/workflows/release.yml/badge.svg)](https://github.com/nft-ui/nft-ui/actions/workflows/release.yml)
 </div>
 
 A web-based UI for managing nftables outbound traffic quotas.
