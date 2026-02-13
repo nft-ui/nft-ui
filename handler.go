@@ -28,6 +28,13 @@ func NewHandler(nft *NFTManager, fwd *ForwardingManager, cfg *Config, logger *lo
 	}
 }
 
+// saveRuleset persists the current nftables ruleset to disk
+func (h *Handler) saveRuleset() {
+	if err := h.nft.SaveRuleset(); err != nil {
+		h.logger.Printf("Error saving ruleset: %v", err)
+	}
+}
+
 // ListQuotas handles GET /api/v1/quotas
 func (h *Handler) ListQuotas(c echo.Context) error {
 	quotas, err := h.nft.ListQuotas()
@@ -67,6 +74,7 @@ func (h *Handler) ResetQuota(c echo.Context) error {
 	}
 
 	h.logger.Printf("Quota reset: %s", id)
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Quota reset successfully",
@@ -99,6 +107,7 @@ func (h *Handler) BatchResetQuotas(c echo.Context) error {
 	}
 
 	h.logger.Printf("Batch reset %d quotas", len(req.IDs))
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Quotas reset successfully",
@@ -133,6 +142,7 @@ func (h *Handler) ModifyQuota(c echo.Context) error {
 	}
 
 	h.logger.Printf("Quota modified: %s to %d bytes", id, req.Bytes)
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Quota modified successfully",
@@ -172,6 +182,7 @@ func (h *Handler) AddQuota(c echo.Context) error {
 	}
 
 	h.logger.Printf("Quota added: port %d, limit %d bytes", req.Port, req.Bytes)
+	h.saveRuleset()
 	return c.JSON(http.StatusCreated, APIResponse{
 		Success: true,
 		Message: "Quota added successfully",
@@ -191,6 +202,7 @@ func (h *Handler) DeleteQuota(c echo.Context) error {
 	}
 
 	h.logger.Printf("Quota deleted: %s", id)
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Quota deleted successfully",
@@ -223,6 +235,7 @@ func (h *Handler) AddPort(c echo.Context) error {
 	}
 
 	h.logger.Printf("Allowed port added: %d", req.Port)
+	h.saveRuleset()
 	return c.JSON(http.StatusCreated, APIResponse{
 		Success: true,
 		Message: "Port added successfully",
@@ -249,6 +262,7 @@ func (h *Handler) DeletePort(c echo.Context) error {
 	}
 
 	h.logger.Printf("Allowed port deleted: handle %d", handle)
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Port deleted successfully",
@@ -397,6 +411,7 @@ func (h *Handler) AddForwarding(c echo.Context) error {
 	}
 
 	h.logger.Printf("Forwarding rule added: %d -> %s:%d (%s) limit=%d Mbps", req.SrcPort, req.DstIP, req.DstPort, req.Protocol, req.LimitMbps)
+	h.saveRuleset()
 	return c.JSON(http.StatusCreated, APIResponse{
 		Success: true,
 		Message: "Forwarding rule added successfully",
@@ -445,6 +460,7 @@ func (h *Handler) EditForwarding(c echo.Context) error {
 	}
 
 	h.logger.Printf("Forwarding rule edited: %s -> %s:%d (%s) limit=%d Mbps", id, req.DstIP, req.DstPort, req.Protocol, req.LimitMbps)
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Forwarding rule updated successfully",
@@ -464,6 +480,7 @@ func (h *Handler) DeleteForwarding(c echo.Context) error {
 	}
 
 	h.logger.Printf("Forwarding rule deleted: %s", id)
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Forwarding rule deleted successfully",
@@ -483,6 +500,7 @@ func (h *Handler) EnableForwarding(c echo.Context) error {
 	}
 
 	h.logger.Printf("Forwarding rule enabled: %s", id)
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Forwarding rule enabled successfully",
@@ -502,6 +520,7 @@ func (h *Handler) DisableForwarding(c echo.Context) error {
 	}
 
 	h.logger.Printf("Forwarding rule disabled: %s", id)
+	h.saveRuleset()
 	return c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Message: "Forwarding rule disabled successfully",

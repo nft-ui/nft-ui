@@ -64,81 +64,86 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="modal-backdrop" onclick={handleCancel} role="presentation">
-  <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-    <h2>Add Quota Rule</h2>
+<div
+  class="modal-backdrop"
+  onclick={handleCancel}
+  role="presentation"
+>
+  <div
+    class="modal"
+    onclick={(e) => e.stopPropagation()}
+    role="dialog"
+    aria-modal="true"
+  >
+    <h2 class="text-xl font-semibold mb-5" style="color: var(--text);">Add Quota Rule</h2>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <div class="form-group">
-        <label for="port">Port</label>
+      <div class="mb-4">
+        <label for="port" class="label">
+          <span>Port</span>
+        </label>
         <input
           id="port"
           type="number"
+          class="input"
+          class:input-error={errors.port}
           bind:value={port}
           placeholder="8080"
           min="1"
           max="65535"
-          class:error={errors.port}
         />
         {#if errors.port}
-          <span class="error-text">{errors.port}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.port}</span>
         {/if}
       </div>
 
-      <div class="form-group">
-        <label for="quota">Quota Limit</label>
-        <div class="form-row">
+      <div class="mb-4">
+        <label for="quota" class="label">
+          <span>Quota Limit</span>
+        </label>
+        <div class="flex gap-3">
           <input
             id="quota"
             type="number"
+            class="input flex-1"
+            class:input-error={errors.quota}
             bind:value={quotaValue}
             placeholder="100"
             min="1"
             step="any"
-            class:error={errors.quota}
           />
-          <select bind:value={quotaUnit}>
+          <select class="select" bind:value={quotaUnit}>
             <option value="MB">MB</option>
             <option value="GB">GB</option>
             <option value="TB">TB</option>
           </select>
         </div>
         {#if errors.quota}
-          <span class="error-text">{errors.quota}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.quota}</span>
         {/if}
       </div>
 
-      <div class="form-group">
-        <label for="comment">Comment (optional)</label>
+      <div class="mb-6">
+        <label for="comment" class="label">
+          <span>Comment (optional)</span>
+        </label>
         <input
           id="comment"
           type="text"
+          class="input"
           bind:value={comment}
           placeholder="block port after limit"
         />
       </div>
 
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" onclick={handleCancel}>
+      <div class="flex justify-end gap-3">
+        <button type="button" class="btn btn-secondary" onclick={handleCancel}>
           Cancel
         </button>
-        <button type="submit" class="btn-primary" disabled={submitting}>
+        <button type="submit" class="btn btn-primary" disabled={submitting}>
           {submitting ? 'Adding...' : 'Add Rule'}
         </button>
       </div>
     </form>
   </div>
 </div>
-
-<style>
-  input.error {
-    border-color: var(--color-danger);
-  }
-
-  .error-text {
-    display: block;
-    color: var(--color-danger);
-    font-size: 12px;
-    margin-top: 4px;
-  }
-</style>

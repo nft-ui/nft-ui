@@ -18,70 +18,33 @@
       onclose?.();
     }, 200);
   }
+
+  const colorMap = {
+    info: 'var(--primary)',
+    success: 'var(--success)',
+    error: 'var(--danger)',
+    warning: 'var(--warning)',
+  };
+
+  let borderColor = $derived(colorMap[type] || colorMap.info);
 </script>
 
-<div class="toast toast-{type}" class:visible>
-  <span class="message">{message}</span>
-  <button class="close-btn" onclick={handleClose}>&times;</button>
+<div
+  class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg min-w-[250px] max-w-[400px] transition-all duration-200"
+  class:opacity-0={!visible}
+  class:translate-x-full={!visible}
+  class:opacity-100={visible}
+  class:translate-x-0={visible}
+  style="background-color: var(--surface); border: 1px solid var(--border); border-left: 4px solid {borderColor}; backdrop-filter: blur(8px);"
+>
+  <span class="flex-1 text-sm" style="color: var(--text);">{message}</span>
+  <button
+    class="bg-transparent border-none text-xl p-0 cursor-pointer leading-none transition-opacity"
+    style="color: var(--text-muted); opacity: 0.7;"
+    onmouseover={(e) => e.currentTarget.style.opacity = '1'}
+    onmouseout={(e) => e.currentTarget.style.opacity = '0.7'}
+    onclick={handleClose}
+  >
+    &times;
+  </button>
 </div>
-
-<style>
-  .toast {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.2s ease;
-    min-width: 250px;
-    max-width: 400px;
-  }
-
-  .toast.visible {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
-  .toast-info {
-    background-color: var(--color-primary);
-    color: white;
-  }
-
-  .toast-success {
-    background-color: var(--color-success);
-    color: white;
-  }
-
-  .toast-error {
-    background-color: var(--color-danger);
-    color: white;
-  }
-
-  .toast-warning {
-    background-color: var(--color-warning);
-    color: black;
-  }
-
-  .message {
-    flex: 1;
-    font-size: 14px;
-  }
-
-  .close-btn {
-    background: transparent;
-    border: none;
-    color: inherit;
-    font-size: 20px;
-    padding: 0;
-    cursor: pointer;
-    opacity: 0.7;
-    line-height: 1;
-  }
-
-  .close-btn:hover {
-    opacity: 1;
-  }
-</style>

@@ -76,74 +76,98 @@
   }
 </script>
 
-<div class="quota-item" class:expanded class:selected={isSelected}>
-  <button class="quota-row" onclick={toggleExpand} type="button">
-    <div class="col-checkbox">
+<div
+  class="table-row"
+  class:selected={isSelected}
+>
+  <button
+    class="grid md:grid-cols-[40px_100px_180px_120px_100px_50px] grid-cols-[40px_80px_1fr_60px] gap-2 md:gap-0 p-3 md:px-4 items-center cursor-pointer w-full bg-transparent border-none text-inherit text-left"
+    onclick={toggleExpand}
+    type="button"
+  >
+    <div>
       <input
         type="checkbox"
+        class="w-[18px] h-[18px] cursor-pointer accent-[var(--primary)]"
         checked={isSelected}
         onclick={handleCheckbox}
       />
     </div>
-    <div class="col-port">
-      <span class="inbound-indicator" class:has-inbound={hasInbound} title={hasInbound ? 'Inbound allowed' : 'No inbound rule'}></span>
-      <span class="port">{quota.port}</span>
+    <div class="flex items-center gap-2">
+      <span
+        class="status-dot"
+        class:status-dot-active={hasInbound}
+        class:status-dot-warning={!hasInbound}
+        title={hasInbound ? 'Inbound allowed' : 'No inbound rule'}
+      ></span>
+      <span class="font-semibold text-base" style="color: var(--text);">{quota.port}</span>
     </div>
-    <div class="col-usage">
-      <span class="used">{formatBytes(quota.used_bytes)}</span>
-      <span class="separator">/</span>
-      <span class="quota">{formatBytes(quota.quota_bytes)}</span>
+    <div class="hidden md:flex items-center gap-1 text-sm">
+      <span class="font-semibold" style="color: var(--text);">{formatBytes(quota.used_bytes)}</span>
+      <span style="color: var(--text-muted);">/</span>
+      <span style="color: var(--text-muted);">{formatBytes(quota.quota_bytes)}</span>
     </div>
-    <div class="col-progress">
-      <div class="ring-wrapper">
-        <svg class="progress-ring" viewBox="0 0 36 36">
-          <circle class="ring-bg" cx="18" cy="18" r="15.5" />
-          <circle
-            class="ring-progress"
-            cx="18" cy="18" r="15.5"
-            stroke={progressColor}
-            stroke-dasharray="{ringPercent}, 100"
-          />
-        </svg>
-        <span class="ring-text">{formatPercent(quota.usage_percent)}</span>
+    <div class="flex items-center gap-2">
+      <div class="flex-1 h-2 rounded-full overflow-hidden" style="background-color: var(--border); min-width: 60px;">
+        <div
+          class="h-full rounded-full transition-all duration-300"
+          style="width: {ringPercent}%; background-color: {progressColor};"
+        ></div>
       </div>
+      <span class="text-xs font-semibold min-w-[40px]" style="color: var(--text);">{formatPercent(quota.usage_percent)}</span>
     </div>
-    <div class="col-status">
-      <span class="status-dot" style="background-color: {statusColor};"></span>
-      <span class="status-text">{quota.status}</span>
+    <div class="hidden md:flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full" style="background-color: {statusColor}; box-shadow: 0 0 6px {statusColor};"></span>
+      <span class="text-sm capitalize" style="color: var(--text);">{quota.status}</span>
     </div>
-    <div class="col-actions">
-      <span class="expand-icon">{expanded ? '−' : '+'}</span>
+    <div>
+      <span class="text-xl text-center w-full block" style="color: var(--text-muted);">{expanded ? '−' : '+'}</span>
     </div>
   </button>
 
   {#if expanded}
-    <div class="quota-details">
+    <div class="px-4 md:pl-14 pb-4 animate-[slideDown_0.2s_ease]">
       {#if quota.comment}
-        <div class="detail-row">
-          <span class="label">Comment:</span>
-          <span class="value">{quota.comment}</span>
+        <div class="flex gap-2 mb-2 text-sm">
+          <span style="color: var(--text-muted);">Comment:</span>
+          <span style="color: var(--text);">{quota.comment}</span>
         </div>
       {/if}
-      <div class="detail-row">
-        <span class="label">ID:</span>
-        <span class="value code">{quota.id}</span>
+      <div class="flex gap-2 mb-2 text-sm">
+        <span style="color: var(--text-muted);">ID:</span>
+        <span class="font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--bg); color: var(--text); border: 1px solid var(--border);">{quota.id}</span>
       </div>
       {#if quota.token}
-        <div class="detail-row">
-          <span class="label">Query Token:</span>
-          <span class="value code token-value">
+        <div class="flex gap-2 mb-2 text-sm">
+          <span style="color: var(--text-muted);">Query Token:</span>
+          <span class="inline-flex items-center gap-2 font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--bg); color: var(--text); border: 1px solid var(--border);">
             {quota.token}
-            <button class="copy-btn" onclick={copyToken} title="Copy token">
+            <button
+              class="px-2 py-0.5 text-[11px] rounded cursor-pointer transition-all"
+              style="background-color: var(--surface-hover); border: 1px solid var(--border); color: var(--text-muted);"
+              onmouseover={(e) => e.currentTarget.style.backgroundColor = 'var(--border)'}
+              onmouseout={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+              onclick={copyToken}
+              title="Copy token"
+            >
               {copiedToken ? 'Copied!' : 'Copy'}
             </button>
           </span>
         </div>
-        <div class="detail-row">
-          <span class="label">Query URL:</span>
-          <span class="value code url-value">
-            <a href={queryUrl} target="_blank">/query?token={quota.token}</a>
-            <button class="copy-btn" onclick={copyQueryUrl} title="Copy URL">
+        <div class="flex gap-2 mb-2 text-sm">
+          <span style="color: var(--text-muted);">Query URL:</span>
+          <span class="inline-flex items-center gap-2 font-mono text-xs px-1.5 py-0.5 rounded" style="background-color: var(--bg); color: var(--text); border: 1px solid var(--border);">
+            <a href={queryUrl} target="_blank" class="no-underline hover:underline" style="color: var(--primary);">
+              /query?token={quota.token}
+            </a>
+            <button
+              class="px-2 py-0.5 text-[11px] rounded cursor-pointer transition-all"
+              style="background-color: var(--surface-hover); border: 1px solid var(--border); color: var(--text-muted);"
+              onmouseover={(e) => e.currentTarget.style.backgroundColor = 'var(--border)'}
+              onmouseout={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
+              onclick={copyQueryUrl}
+              title="Copy URL"
+            >
               {copiedUrl ? 'Copied!' : 'Copy'}
             </button>
           </span>
@@ -151,23 +175,23 @@
       {/if}
 
       {#if !$readOnly}
-        <div class="actions">
+        <div class="flex gap-2 mt-4">
           <button
-            class="btn-secondary"
+            class="btn btn-sm btn-secondary"
             onclick={() => (showResetConfirm = true)}
             disabled={processing}
           >
             Reset
           </button>
           <button
-            class="btn-secondary"
+            class="btn btn-sm btn-secondary"
             onclick={() => (showEditModal = true)}
             disabled={processing}
           >
             Edit
           </button>
           <button
-            class="btn-danger"
+            class="btn btn-sm btn-danger"
             onclick={() => (showDeleteConfirm = true)}
             disabled={processing}
           >
@@ -208,151 +232,8 @@
 {/if}
 
 <style>
-  .quota-item {
-    border-bottom: 1px solid var(--color-border);
-    transition: background-color 0.2s;
-  }
-
-  .quota-item:last-child {
-    border-bottom: none;
-  }
-
-  .quota-item:hover {
-    background-color: var(--color-surface-hover);
-  }
-
-  .quota-item.selected {
-    background-color: rgba(74, 158, 255, 0.1);
-  }
-
-  .quota-row {
-    display: grid;
-    grid-template-columns: 40px 100px 180px 120px 100px 50px;
-    padding: 12px 16px;
-    align-items: center;
-    cursor: pointer;
-    width: 100%;
-    background: transparent;
-    border: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-  }
-
-  .col-checkbox input {
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-  }
-
-  .col-port {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .inbound-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: var(--color-warning);
-    flex-shrink: 0;
-  }
-
-  .inbound-indicator.has-inbound {
-    background-color: var(--color-success);
-  }
-
-  .port {
-    font-weight: 600;
-    font-size: 16px;
-  }
-
-  .col-usage {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 14px;
-  }
-
-  .col-usage .used {
-    font-weight: 600;
-  }
-
-  .col-usage .separator {
-    color: var(--color-text-muted);
-  }
-
-  .col-usage .quota {
-    color: var(--color-text-muted);
-  }
-
-  .col-progress {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .ring-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .progress-ring {
-    width: 44px;
-    height: 44px;
-    transform: rotate(-90deg);
-  }
-
-  .ring-bg {
-    fill: none;
-    stroke: var(--color-bg);
-    stroke-width: 3;
-  }
-
-  .ring-progress {
-    fill: none;
-    stroke-width: 3;
-    stroke-linecap: round;
-    transition: stroke-dasharray 0.3s ease;
-  }
-
-  .ring-text {
-    font-size: 12px;
-    font-weight: 600;
-    min-width: 40px;
-  }
-
-  .col-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  .status-text {
-    font-size: 14px;
-    text-transform: capitalize;
-  }
-
-  .expand-icon {
-    font-size: 20px;
-    color: var(--color-text-muted);
-    text-align: center;
-    width: 100%;
-    display: block;
-  }
-
-  .quota-details {
-    padding: 0 16px 16px 56px;
-    animation: slideDown 0.2s ease;
+  .selected {
+    background-color: rgba(59, 130, 246, 0.1);
   }
 
   @keyframes slideDown {
@@ -363,79 +244,6 @@
     to {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  .detail-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-    font-size: 14px;
-  }
-
-  .label {
-    color: var(--color-text-muted);
-  }
-
-  .code {
-    font-family: monospace;
-    font-size: 12px;
-    background-color: var(--color-bg);
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-
-  .token-value,
-  .url-value {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .url-value a {
-    color: var(--color-primary);
-    text-decoration: none;
-  }
-
-  .url-value a:hover {
-    text-decoration: underline;
-  }
-
-  .copy-btn {
-    padding: 2px 8px;
-    font-size: 11px;
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    cursor: pointer;
-    color: var(--color-text-muted);
-    transition: all 0.2s;
-  }
-
-  .copy-btn:hover {
-    background-color: var(--color-surface-hover);
-    color: var(--color-text);
-  }
-
-  .actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-  }
-
-  @media (max-width: 768px) {
-    .quota-row {
-      grid-template-columns: 40px 80px 1fr 60px;
-      gap: 8px;
-    }
-
-    .col-usage,
-    .col-status {
-      display: none;
-    }
-
-    .quota-details {
-      padding-left: 16px;
     }
   }
 </style>

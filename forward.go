@@ -51,7 +51,8 @@ func (m *ForwardingManager) execNFT(args ...string) ([]byte, error) {
 	return output, nil
 }
 
-// EnsureFilterForwardSetup ensures the filter table and forward chain exist
+// EnsureFilterForwardSetup ensures the filter table and forward chain exist,
+// and that the established/related fast-path rule is present
 func (m *ForwardingManager) EnsureFilterForwardSetup() error {
 	// Check if filter table exists
 	_, err := m.execNFT("list", "table", "ip", "filter")
@@ -62,6 +63,7 @@ func (m *ForwardingManager) EnsureFilterForwardSetup() error {
 		}
 	}
 
+	chainCreated := false
 	// Check if forward chain exists
 	_, err = m.execNFT("list", "chain", "ip", "filter", "forward")
 	if err != nil {
@@ -70,6 +72,50 @@ func (m *ForwardingManager) EnsureFilterForwardSetup() error {
 			"{ type filter hook forward priority filter ; policy accept ; }"); err != nil {
 			return fmt.Errorf("failed to create forward chain: %w", err)
 		}
+		chainCreated = true
+	}
+
+	// Ensure ct state established,related accept rule exists as fast-path
+	if err := m.ensureConntrackFastPath(chainCreated); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ensureConntrackFastPath ensures a "ct state established,related accept" rule
+// exists at the top of the forward chain for performance
+func (m *ForwardingManager) ensureConntrackFastPath(chainJustCreated bool) error {
+	const ctComment = "nft-ui ct-fastpath"
+
+	if !chainJustCreated {
+		// Check if rule already exists
+		output, err := m.execNFT("-j", "-a", "list", "chain", "ip", "filter", "forward")
+		if err != nil {
+			return nil // best effort
+		}
+
+		var ruleset NFTRuleset
+		if err := json.Unmarshal(output, &ruleset); err != nil {
+			return nil
+		}
+
+		for _, obj := range ruleset.NFTables {
+			if obj.Rule == nil || obj.Rule.Chain != "forward" {
+				continue
+			}
+			if obj.Rule.Comment == ctComment {
+				return nil // already exists
+			}
+		}
+	}
+
+	// Insert at position 0 (top of chain)
+	if _, err := m.execNFT("insert", "rule", "ip", "filter", "forward",
+		"ct", "state", "established,related",
+		"accept",
+		"comment", fmt.Sprintf(`"%s"`, ctComment)); err != nil {
+		return fmt.Errorf("failed to add conntrack fast-path rule: %w", err)
 	}
 
 	return nil
@@ -483,6 +529,16 @@ func (m *ForwardingManager) AddForwardingRule(srcPort int, dstIP string, dstPort
 		return fmt.Errorf("failed to add forward limit rules: %w", err)
 	}
 
+	// Add TCP MSS clamping rule to prevent MTU-related stalls
+	if err := m.addMSSClampRule(dstIP, fullComment); err != nil {
+		// Rollback: delete previous rules
+		m.deleteDNATRuleBySrcPort(srcPort)
+		m.deleteMasqueradeRuleBySrcPort(srcPort)
+		m.deleteOutputDNATRuleBySrcPort(srcPort)
+		m.deleteForwardLimitRules(srcPort)
+		return fmt.Errorf("failed to add MSS clamp rule: %w", err)
+	}
+
 	return nil
 }
 
@@ -586,6 +642,66 @@ func (m *ForwardingManager) addOutputDNATRule(srcPort int, dstIP string, dstPort
 
 	_, err := m.execNFT(args...)
 	return err
+}
+
+// addMSSClampRule adds bidirectional TCP MSS clamping rules in filter forward chain to prevent MTU-related stalls
+func (m *ForwardingManager) addMSSClampRule(dstIP string, comment string) error {
+	// Ensure filter table and forward chain exist
+	if err := m.EnsureFilterForwardSetup(); err != nil {
+		return err
+	}
+
+	// Outbound: to destination
+	if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
+		"ip", "daddr", dstIP,
+		"tcp", "flags", "syn",
+		"tcp", "option", "maxseg", "size", "set", "1452",
+		"comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
+		return fmt.Errorf("failed to add outbound MSS clamp rule: %w", err)
+	}
+
+	// Inbound: SYN-ACK from destination
+	if _, err := m.execNFT("add", "rule", "ip", "filter", "forward",
+		"ip", "saddr", dstIP,
+		"tcp", "flags", "syn",
+		"tcp", "option", "maxseg", "size", "set", "1452",
+		"comment", fmt.Sprintf(`"%s"`, comment)); err != nil {
+		return fmt.Errorf("failed to add inbound MSS clamp rule: %w", err)
+	}
+
+	return nil
+}
+
+// deleteMSSClampRules deletes TCP MSS clamping rules from filter forward chain
+func (m *ForwardingManager) deleteMSSClampRules(srcPort int) error {
+	output, err := m.execNFT("-j", "-a", "list", "chain", "ip", "filter", "forward")
+	if err != nil {
+		return nil
+	}
+
+	var ruleset NFTRuleset
+	if err := json.Unmarshal(output, &ruleset); err != nil {
+		return err
+	}
+
+	commentPrefix := fmt.Sprintf("%s %d", ForwardingComment, srcPort)
+	for _, obj := range ruleset.NFTables {
+		if obj.Rule == nil || obj.Rule.Chain != "forward" {
+			continue
+		}
+		if !strings.HasPrefix(obj.Rule.Comment, commentPrefix) {
+			continue
+		}
+		// Check if this rule has a mangle expression (MSS clamping)
+		for _, expr := range obj.Rule.Expr {
+			if _, ok := expr["mangle"]; ok {
+				m.execNFT("delete", "rule", "ip", "filter", "forward", "handle", strconv.FormatInt(obj.Rule.Handle, 10))
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // addForwardLimitRules adds bandwidth limit rules in filter forward chain (bidirectional)
@@ -735,6 +851,10 @@ func (m *ForwardingManager) DeleteForwardingRule(id string) error {
 		fmt.Printf("Warning: failed to delete forward limit rules: %v\n", err)
 	}
 
+	if err := m.deleteMSSClampRules(srcPort); err != nil {
+		fmt.Printf("Warning: failed to delete MSS clamp rules: %v\n", err)
+	}
+
 	return nil
 }
 
@@ -785,6 +905,7 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 	m.deleteMasqueradeRuleBySrcPort(srcPort)
 	m.deleteOutputDNATRuleBySrcPort(srcPort)
 	m.deleteForwardLimitRules(srcPort)
+	m.deleteMSSClampRules(srcPort)
 
 	// Build comment string
 	fullComment := fmt.Sprintf("%s %d", ForwardingComment, srcPort)
@@ -813,6 +934,14 @@ func (m *ForwardingManager) EditForwardingRule(id string, dstIP string, dstPort 
 		m.deleteMasqueradeRuleBySrcPort(srcPort)
 		m.deleteOutputDNATRuleBySrcPort(srcPort)
 		return fmt.Errorf("failed to add forward limit rules: %w", err)
+	}
+
+	if err := m.addMSSClampRule(dstIP, fullComment); err != nil {
+		m.deleteDNATRuleBySrcPort(srcPort)
+		m.deleteMasqueradeRuleBySrcPort(srcPort)
+		m.deleteOutputDNATRuleBySrcPort(srcPort)
+		m.deleteForwardLimitRules(srcPort)
+		return fmt.Errorf("failed to add MSS clamp rule: %w", err)
 	}
 
 	return nil
@@ -882,6 +1011,14 @@ func (m *ForwardingManager) EnableForwardingRule(id string) error {
 		return fmt.Errorf("failed to add forward limit rules: %w", err)
 	}
 
+	if err := m.addMSSClampRule(rule.DstIP, fullComment); err != nil {
+		m.deleteDNATRuleBySrcPort(rule.SrcPort)
+		m.deleteMasqueradeRuleBySrcPort(rule.SrcPort)
+		m.deleteOutputDNATRuleBySrcPort(rule.SrcPort)
+		m.deleteForwardLimitRules(rule.SrcPort)
+		return fmt.Errorf("failed to add MSS clamp rule: %w", err)
+	}
+
 	// Remove from disabled rules
 	disabledRules = append(disabledRules[:idx], disabledRules[idx+1:]...)
 	return m.saveDisabledRules(disabledRules)
@@ -925,6 +1062,7 @@ func (m *ForwardingManager) DisableForwardingRule(id string) error {
 	m.deleteMasqueradeRuleBySrcPort(srcPort)   // Ignore errors
 	m.deleteOutputDNATRuleBySrcPort(srcPort)   // Ignore errors
 	m.deleteForwardLimitRules(srcPort)         // Ignore errors
+	m.deleteMSSClampRules(srcPort)             // Ignore errors
 
 	// Save to disabled rules
 	disabledRules, _ := m.loadDisabledRules()

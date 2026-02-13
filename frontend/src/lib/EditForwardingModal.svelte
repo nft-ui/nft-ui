@@ -69,218 +69,131 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="modal-backdrop" onclick={onclose} role="presentation">
-  <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-    <div class="modal-header">
-      <h3>Edit Forwarding Rule</h3>
-      <button class="close-btn" onclick={onclose}>&times;</button>
+<div
+  class="modal-backdrop"
+  onclick={onclose}
+  role="presentation"
+>
+  <div
+    class="modal w-full max-w-[420px] max-h-[90vh] overflow-y-auto"
+    onclick={(e) => e.stopPropagation()}
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="text-lg font-semibold" style="color: var(--text);">Edit Forwarding Rule</h3>
+      <button
+        class="bg-transparent border-none text-2xl cursor-pointer p-0 leading-none transition-colors"
+        style="color: var(--text-muted);"
+        onmouseover={(e) => e.currentTarget.style.color = 'var(--text)'}
+        onmouseout={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+        onclick={onclose}
+      >
+        &times;
+      </button>
     </div>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <div class="form-group">
-        <label for="srcPortDisplay">Source Port</label>
-        <input type="text" id="srcPortDisplay" value={rule.src_port} disabled />
-        <span class="help-text">Source port cannot be changed</span>
+      <div class="mb-4">
+        <label for="srcPortDisplay" class="label">
+          <span>Source Port</span>
+        </label>
+        <input type="text" id="srcPortDisplay" class="input" value={rule.src_port} disabled />
+        <span class="text-xs mt-1 block" style="color: var(--text-muted);">Source port cannot be changed</span>
       </div>
 
-      <div class="form-group">
-        <label for="dstIP">Destination IP</label>
+      <div class="mb-4">
+        <label for="dstIP" class="label">
+          <span>Destination IP</span>
+        </label>
         <input
           type="text"
           id="dstIP"
+          class="input"
+          class:input-error={errors.dstIP}
           bind:value={dstIP}
           placeholder="e.g. 192.168.1.100"
-          class:error={errors.dstIP}
         />
         {#if errors.dstIP}
-          <span class="error-text">{errors.dstIP}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.dstIP}</span>
         {/if}
       </div>
 
-      <div class="form-group">
-        <label for="dstPort">Destination Port</label>
+      <div class="mb-4">
+        <label for="dstPort" class="label">
+          <span>Destination Port</span>
+        </label>
         <input
           type="number"
           id="dstPort"
+          class="input"
+          class:input-error={errors.dstPort}
           bind:value={dstPort}
           placeholder="e.g. 22"
           min="1"
           max="65535"
-          class:error={errors.dstPort}
         />
         {#if errors.dstPort}
-          <span class="error-text">{errors.dstPort}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.dstPort}</span>
         {/if}
       </div>
 
-      <div class="form-group">
-        <label for="protocol">Protocol</label>
-        <select id="protocol" bind:value={protocol}>
+      <div class="mb-4">
+        <label for="protocol" class="label">
+          <span>Protocol</span>
+        </label>
+        <select id="protocol" class="select" bind:value={protocol}>
           <option value="both">TCP + UDP</option>
           <option value="tcp">TCP only</option>
           <option value="udp">UDP only</option>
         </select>
       </div>
 
-      <div class="form-group">
-        <label for="comment">Comment (optional)</label>
+      <div class="mb-4">
+        <label for="comment" class="label">
+          <span>Comment (optional)</span>
+        </label>
         <input
           type="text"
           id="comment"
+          class="input"
           bind:value={comment}
           placeholder="e.g. SSH tunnel"
           maxlength="100"
         />
       </div>
 
-      <div class="form-group">
-        <label for="limitMbps">Bandwidth Limit (Mbps)</label>
+      <div class="mb-4">
+        <label for="limitMbps" class="label">
+          <span>Bandwidth Limit (Mbps)</span>
+        </label>
         <input
           type="number"
           id="limitMbps"
+          class="input"
+          class:input-error={errors.limitMbps}
           bind:value={limitMbps}
           placeholder="0"
           min="0"
-          class:error={errors.limitMbps}
         />
         {#if errors.limitMbps}
-          <span class="error-text">{errors.limitMbps}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{errors.limitMbps}</span>
         {/if}
-        <span class="help-text">0 = no limit, or set max Mbps (e.g. 10, 100)</span>
+        <span class="text-xs mt-1 block" style="color: var(--text-muted);">0 = no limit, or set max Mbps (e.g. 10, 100)</span>
       </div>
 
-      <div class="note">
+      <div class="text-sm p-3 rounded-lg mt-4" style="background-color: var(--surface-hover); color: var(--text-muted); border: 1px solid var(--border);">
         Note: Editing will briefly disable and re-enable the rule.
       </div>
 
-      <div class="form-actions">
-        <button type="button" class="btn-secondary" onclick={onclose}>
+      <div class="flex justify-end gap-3 mt-6">
+        <button type="button" class="btn btn-secondary" onclick={onclose}>
           Cancel
         </button>
-        <button type="submit" class="btn-primary" disabled={submitting}>
+        <button type="submit" class="btn btn-primary" disabled={submitting}>
           {submitting ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
     </form>
   </div>
 </div>
-
-<style>
-  .modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  .modal {
-    background-color: var(--color-surface);
-    border-radius: 12px;
-    padding: 24px;
-    width: 100%;
-    max-width: 420px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-  }
-
-  .close-btn {
-    background: transparent;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: var(--color-text-muted);
-    padding: 0;
-    line-height: 1;
-  }
-
-  .close-btn:hover {
-    color: var(--color-text);
-  }
-
-  .form-group {
-    margin-bottom: 16px;
-  }
-
-  label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 14px;
-    font-weight: 500;
-  }
-
-  input,
-  select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    background-color: var(--color-bg);
-    color: var(--color-text);
-    font-size: 14px;
-  }
-
-  input:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  input:focus,
-  select:focus {
-    outline: none;
-    border-color: var(--color-primary);
-  }
-
-  input.error {
-    border-color: var(--color-danger);
-  }
-
-  .error-text {
-    display: block;
-    color: var(--color-danger);
-    font-size: 12px;
-    margin-top: 4px;
-  }
-
-  .help-text {
-    display: block;
-    color: var(--color-text-muted);
-    font-size: 12px;
-    margin-top: 4px;
-  }
-
-  .note {
-    font-size: 13px;
-    color: var(--color-text-muted);
-    background-color: var(--color-bg);
-    padding: 10px 12px;
-    border-radius: 6px;
-    margin-top: 16px;
-  }
-
-  .form-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    margin-top: 24px;
-  }
-</style>

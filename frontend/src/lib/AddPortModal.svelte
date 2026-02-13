@@ -50,57 +50,51 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="modal-backdrop" onclick={handleCancel} role="presentation">
-  <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-    <h2>Add Allowed Port</h2>
+<div
+  class="modal-backdrop"
+  onclick={handleCancel}
+  role="presentation"
+>
+  <div
+    class="modal"
+    onclick={(e) => e.stopPropagation()}
+    role="dialog"
+    aria-modal="true"
+  >
+    <h2 class="text-xl font-semibold mb-5" style="color: var(--text);">Add Allowed Port</h2>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <div class="form-group">
-        <label for="port">Port Number</label>
+      <div class="mb-6">
+        <label for="port" class="label">
+          <span>Port Number</span>
+        </label>
         <input
           id="port"
           type="number"
+          class="input"
+          class:input-error={error}
           bind:value={port}
           placeholder="8080"
           min="1"
           max="65535"
-          class:error={error}
           autofocus
         />
         {#if error}
-          <span class="error-text">{error}</span>
+          <span class="text-xs mt-1 block" style="color: var(--danger);">{error}</span>
         {/if}
-        <span class="hint">This will add a TCP inbound rule: tcp dport &lt;port&gt; accept</span>
+        <span class="text-xs mt-2 block" style="color: var(--text-muted);">
+          This will add a TCP inbound rule: tcp dport &lt;port&gt; accept
+        </span>
       </div>
 
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" onclick={handleCancel}>
+      <div class="flex justify-end gap-3">
+        <button type="button" class="btn btn-secondary" onclick={handleCancel}>
           Cancel
         </button>
-        <button type="submit" class="btn-primary" disabled={submitting}>
+        <button type="submit" class="btn btn-primary" disabled={submitting}>
           {submitting ? 'Adding...' : 'Add Port'}
         </button>
       </div>
     </form>
   </div>
 </div>
-
-<style>
-  input.error {
-    border-color: var(--color-danger);
-  }
-
-  .error-text {
-    display: block;
-    color: var(--color-danger);
-    font-size: 12px;
-    margin-top: 4px;
-  }
-
-  .hint {
-    display: block;
-    color: var(--color-text-muted);
-    font-size: 12px;
-    margin-top: 8px;
-  }
-</style>

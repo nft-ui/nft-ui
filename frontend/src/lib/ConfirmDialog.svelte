@@ -26,16 +26,25 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="modal-backdrop" onclick={handleCancel} role="presentation">
-  <div class="modal confirm-dialog" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-    <h2>{title}</h2>
-    <p>{message}</p>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick={handleCancel}>
+<div
+  class="modal-backdrop"
+  onclick={handleCancel}
+  role="presentation"
+>
+  <div
+    class="modal min-w-[350px] max-w-[90%]"
+    onclick={(e) => e.stopPropagation()}
+    role="dialog"
+    aria-modal="true"
+  >
+    <h2 class="text-xl font-semibold mb-5" style="color: var(--text);">{title}</h2>
+    <p class="mb-5 leading-relaxed" style="color: var(--text-muted);">{message}</p>
+    <div class="flex justify-end gap-3">
+      <button class="btn btn-secondary" onclick={handleCancel}>
         {cancelText}
       </button>
       <button
-        class={danger ? 'btn-danger' : 'btn-primary'}
+        class="btn {danger ? 'btn-danger' : 'btn-primary'}"
         onclick={handleConfirm}
       >
         {confirmText}
@@ -43,15 +52,3 @@
     </div>
   </div>
 </div>
-
-<style>
-  .confirm-dialog {
-    min-width: 350px;
-  }
-
-  .confirm-dialog p {
-    color: var(--color-text-muted);
-    margin: 0 0 20px 0;
-    line-height: 1.6;
-  }
-</style>
