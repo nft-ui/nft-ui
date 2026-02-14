@@ -6,7 +6,7 @@
   [![Release](https://github.com/nft-ui/nft-ui/actions/workflows/release.yml/badge.svg)](https://github.com/nft-ui/nft-ui/actions/workflows/release.yml)
 </div>
 
-A web-based UI for managing nftables outbound traffic quotas.
+A web-based management tool for nftables firewall rules, including outbound traffic quotas, inbound port access control, and port forwarding management.
 
 ## Features
 
@@ -198,6 +198,29 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now nft-ui
 ```
 
+## Files Modified by nft-ui
+
+**Runtime ruleset changes:**
+- nft-ui modifies active nftables rules directly via the `nft` command
+- Changes are applied **in-memory only** by default
+- **Does NOT automatically modify** `/etc/nftables.conf` or `/etc/nftables.d/` files
+
+**Persistent files written by nft-ui:**
+- `/var/lib/nft-ui/ruleset.nft` - Backup of complete ruleset (saved after each modification)
+- `/var/lib/nft-ui/disabled-forwards.json` - State file for disabled port forwarding rules
+
+**To make changes persistent across reboots:**
+You must manually save the ruleset to your system's nftables configuration:
+```bash
+# Option 1: Save to main config
+sudo nft list ruleset > /etc/nftables.conf
+
+# Option 2: Save to a drop-in file
+sudo nft list ruleset > /etc/nftables.d/nft-ui.conf
+```
+
+Or configure your system to restore from nft-ui's backup on boot.
+
 ## Expected nftables Rule Format
 
 Quota rules in the `output` chain:
@@ -221,4 +244,4 @@ make
 
 ## License
 
-MIT
+GPL-3.0
