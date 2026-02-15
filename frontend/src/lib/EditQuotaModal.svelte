@@ -108,14 +108,14 @@
           <input
             id="quota"
             type="number"
-            class="input flex-1"
+            class="input flex-1 min-w-0"
             class:input-error={error}
             bind:value={quotaValue}
             placeholder="100"
             min="1"
             step="any"
           />
-          <select class="select" bind:value={quotaUnit}>
+          <select class="select shrink-0 w-20" bind:value={quotaUnit}>
             <option value="MB">MB</option>
             <option value="GB">GB</option>
             <option value="TB">TB</option>
