@@ -10,14 +10,9 @@ A web-based management tool for nftables firewall rules, including outbound traf
 
 ## Features
 
-- View quota rules with circular progress indicators
-- Add / Edit / Delete quota rules
-- Reset quota usage (single or batch)
-- Manage allowed inbound ports
-- Visual indicator for inbound port status
-- Basic authentication support
-- Read-only mode
-- Auto-refresh
+- **Quota Management** — View, add, edit, delete, and reset quota rules with visual progress
+- **Inbound Port Control** — Manage allowed ports with status indicators
+- **Authentication & Access** — Basic auth, read-only mode, auto-refresh
 
 ## Installation
 
